@@ -1,7 +1,5 @@
 package com.github.byronyi;
 
-import sun.nio.ch.SelectorImpl;
-
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -12,11 +10,11 @@ import java.util.Set;
 
 public class CoflowSelector extends AbstractSelector {
 
-    private AbstractSelector selector = null;
+    final private AbstractSelector selector;
 
-    CoflowSelector(CoflowSelectorProvider proxy) throws IOException {
-        super(proxy);
-        selector = proxy.selectorProvider.openSelector();
+    protected CoflowSelector(CoflowSelectorProvider provider) throws IOException {
+        super(provider);
+        selector = provider.selectorProvider.openSelector();
 
         System.out.println("Selector " + selector +
                 " opened in thread " + Thread.currentThread().getName());
@@ -29,7 +27,7 @@ public class CoflowSelector extends AbstractSelector {
         System.out.println("Selector closed in thread " +
                 Thread.currentThread().getName());
 
-        ((SelectorImpl) selector).implCloseSelector();
+        selector.close();
     }
 
     @Override
