@@ -18,7 +18,7 @@ public class Server {
     public static void main(String[] args) throws Exception {
 
         System.setProperty("java.nio.channels.spi.SelectorProvider",
-                "com.github.byronyi.CoflowSelectorProvider");
+            "com.github.byronyi.CoflowSelectorProvider");
 
         int port;
         if (args.length > 0) {
@@ -48,6 +48,8 @@ public class Server {
             ChannelFuture f = b.bind(port).sync();
 
             f.channel().closeFuture().sync();
+        } catch (Throwable e) {
+            e.printStackTrace();
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();

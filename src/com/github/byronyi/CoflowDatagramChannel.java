@@ -1,5 +1,9 @@
 package com.github.byronyi;
 
+import sun.nio.ch.SelChImpl;
+import sun.nio.ch.SelectionKeyImpl;
+
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -7,7 +11,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
 import java.util.Set;
 
-public class CoflowDatagramChannel extends DatagramChannel {
+class CoflowDatagramChannel extends DatagramChannel implements SelChImpl {
 
     final private DatagramChannel datagramChannel;
 
@@ -120,5 +124,35 @@ public class CoflowDatagramChannel extends DatagramChannel {
     @Override
     public MembershipKey join(InetAddress group, NetworkInterface interf, InetAddress source) throws IOException {
         return datagramChannel.join(group, interf, source);
+    }
+
+    @Override
+    public FileDescriptor getFD() {
+        return ((SelChImpl) datagramChannel).getFD();
+    }
+
+    @Override
+    public int getFDVal() {
+        return ((SelChImpl) datagramChannel).getFDVal();
+    }
+
+    @Override
+    public boolean translateAndUpdateReadyOps(int i, SelectionKeyImpl selectionKey) {
+        return ((SelChImpl) datagramChannel).translateAndUpdateReadyOps(i, selectionKey);
+    }
+
+    @Override
+    public boolean translateAndSetReadyOps(int i, SelectionKeyImpl selectionKey) {
+        return ((SelChImpl) datagramChannel).translateAndSetReadyOps(i, selectionKey);
+    }
+
+    @Override
+    public void translateAndSetInterestOps(int i, SelectionKeyImpl selectionKey) {
+        ((SelChImpl) datagramChannel).translateAndSetInterestOps(i, selectionKey);
+    }
+
+    @Override
+    public void kill() throws IOException {
+        ((SelChImpl) datagramChannel).kill();
     }
 }

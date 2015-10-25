@@ -1,5 +1,9 @@
 package com.github.byronyi;
 
+import sun.nio.ch.SelChImpl;
+import sun.nio.ch.SelectionKeyImpl;
+
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -8,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
 
-public class CoflowSocketChannel extends SocketChannel {
+class CoflowSocketChannel extends SocketChannel implements SelChImpl {
 
     final private SocketChannel socketChannel;
 
@@ -110,5 +114,35 @@ public class CoflowSocketChannel extends SocketChannel {
     @Override
     protected void implConfigureBlocking(boolean block) throws IOException {
         socketChannel.configureBlocking(block);
+    }
+
+    @Override
+    public FileDescriptor getFD() {
+        return ((SelChImpl) socketChannel).getFD();
+    }
+
+    @Override
+    public int getFDVal() {
+        return ((SelChImpl) socketChannel).getFDVal();
+    }
+
+    @Override
+    public boolean translateAndUpdateReadyOps(int i, SelectionKeyImpl selectionKey) {
+        return ((SelChImpl) socketChannel).translateAndUpdateReadyOps(i, selectionKey);
+    }
+
+    @Override
+    public boolean translateAndSetReadyOps(int i, SelectionKeyImpl selectionKey) {
+        return ((SelChImpl) socketChannel).translateAndSetReadyOps(i, selectionKey);
+    }
+
+    @Override
+    public void translateAndSetInterestOps(int i, SelectionKeyImpl selectionKey) {
+        ((SelChImpl) socketChannel).translateAndSetInterestOps(i, selectionKey);
+    }
+
+    @Override
+    public void kill() throws IOException {
+        ((SelChImpl) socketChannel).kill();
     }
 }
