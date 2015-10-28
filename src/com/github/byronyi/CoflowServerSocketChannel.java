@@ -23,7 +23,8 @@ class CoflowServerSocketChannel extends ServerSocketChannel implements SelChImpl
 
     @Override
     public ServerSocketChannel bind(SocketAddress local, int backlog) throws IOException {
-        return serverSocketChannel.bind(local, backlog);
+        serverSocketChannel.bind(local, backlog);
+        return this;
     }
 
     @Override
@@ -48,7 +49,11 @@ class CoflowServerSocketChannel extends ServerSocketChannel implements SelChImpl
 
     @Override
     public SocketChannel accept() throws IOException {
-        return serverSocketChannel.accept();
+        SocketChannel socketChannel = serverSocketChannel.accept();
+        if (socketChannel == null) {
+            return null;
+        }
+        return new CoflowSocketChannel(this.provider(), socketChannel);
     }
 
     @Override

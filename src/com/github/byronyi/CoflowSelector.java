@@ -34,7 +34,7 @@ public class CoflowSelector extends AbstractSelector {
     protected SelectionKey register(AbstractSelectableChannel ch,
                                     int ops, Object att) {
 
-        System.out.println("Channel " + ch.getClass() + " registered with "
+        System.out.println("Channel " + ch.getClass() + " registered with attr "
                 + att.getClass() + " in thread " +
                 Thread.currentThread().getName());
 
@@ -61,7 +61,10 @@ public class CoflowSelector extends AbstractSelector {
         System.out.println("selectedKeys() called in thread " +
                 Thread.currentThread().getName());
 
-        return selector.selectedKeys();
+        Set<SelectionKey> selectedKeys = selector.selectedKeys();
+        System.out.println("Selected " + selectedKeys);
+
+        return selectedKeys;
     }
 
     @Override

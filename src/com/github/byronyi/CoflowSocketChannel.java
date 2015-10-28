@@ -10,6 +10,7 @@ import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
 
 class CoflowSocketChannel extends SocketChannel implements SelChImpl {
@@ -21,9 +22,16 @@ class CoflowSocketChannel extends SocketChannel implements SelChImpl {
         socketChannel = provider.selectorProvider.openSocketChannel();
     }
 
+    protected CoflowSocketChannel(SelectorProvider provider,
+                                  SocketChannel socketChannel) {
+        super(provider);
+        this.socketChannel = socketChannel;
+    }
+
     @Override
     public SocketChannel bind(SocketAddress local) throws IOException {
-        return socketChannel.bind(local);
+        socketChannel.bind(local);
+        return this;
     }
 
     @Override
@@ -43,12 +51,14 @@ class CoflowSocketChannel extends SocketChannel implements SelChImpl {
 
     @Override
     public SocketChannel shutdownInput() throws IOException {
-        return socketChannel.shutdownInput();
+        socketChannel.shutdownInput();
+        return this;
     }
 
     @Override
     public SocketChannel shutdownOutput() throws IOException {
-        return socketChannel.shutdownOutput();
+        socketChannel.shutdownOutput();
+        return this;
     }
 
     @Override
@@ -68,6 +78,7 @@ class CoflowSocketChannel extends SocketChannel implements SelChImpl {
 
     @Override
     public boolean connect(SocketAddress remote) throws IOException {
+        System.out.println("Connecting to " + remote);
         return socketChannel.connect(remote);
     }
 
@@ -83,6 +94,7 @@ class CoflowSocketChannel extends SocketChannel implements SelChImpl {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        System.out.println("Reading");
         return socketChannel.read(dst);
     }
 
@@ -93,6 +105,7 @@ class CoflowSocketChannel extends SocketChannel implements SelChImpl {
 
     @Override
     public int write(ByteBuffer src) throws IOException {
+        System.out.println("Writing");
         return socketChannel.write(src);
     }
 

@@ -28,7 +28,8 @@ class CoflowDatagramChannel extends DatagramChannel implements SelChImpl {
 
     @Override
     public DatagramChannel bind(SocketAddress local) throws IOException {
-        return datagramChannel.bind(local);
+        datagramChannel.bind(local);
+        return this;
     }
 
     @Override
@@ -58,12 +59,14 @@ class CoflowDatagramChannel extends DatagramChannel implements SelChImpl {
 
     @Override
     public DatagramChannel connect(SocketAddress remote) throws IOException {
-        return datagramChannel.connect(remote);
+        datagramChannel.connect(remote);
+        return this;
     }
 
     @Override
     public DatagramChannel disconnect() throws IOException {
-        return datagramChannel.disconnect();
+        datagramChannel.disconnect();
+        return this;
     }
 
     @Override
