@@ -1,0 +1,13 @@
+apply plugin: 'application'
+
+mainClassName = "Server"
+
+applicationDefaultJvmArgs = ["-Djava.nio.channels.spi.SelectorProvider=com.github.byronyi.CoflowSelectorProvider"]
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile 'io.netty:netty-all:4.0.33.Final'
+}

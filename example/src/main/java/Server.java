@@ -17,9 +17,6 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
 
-        System.setProperty("java.nio.channels.spi.SelectorProvider",
-            "com.github.byronyi.CoflowSelectorProvider");
-
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
