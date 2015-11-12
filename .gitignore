@@ -13,3 +13,14 @@
 hs_err_pid*
 
 # Created by .ignore support plugin (hsz.mobi)
+
+# Gradle
+.gradle
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Intellij IDEA files
+.idea/
+*.iml
