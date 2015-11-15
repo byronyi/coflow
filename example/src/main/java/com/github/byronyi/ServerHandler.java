@@ -1,7 +1,11 @@
+package com.github.byronyi;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-
+/**
+ * Simple echo server handler from Netty user guide.
+ */
 public class ServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override

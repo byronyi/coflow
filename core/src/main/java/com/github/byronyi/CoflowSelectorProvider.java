@@ -13,26 +13,32 @@ import java.nio.channels.spi.SelectorProvider;
 
 public class CoflowSelectorProvider extends SelectorProvider {
 
-    final SelectorProvider selectorProvider = DefaultSelectorProvider.create();
+    final private SelectorProvider defaultProvider =
+        DefaultSelectorProvider.create();
 
-    @Override
-    public DatagramChannel openDatagramChannel() throws IOException {
-        return selectorProvider.openDatagramChannel();
+    protected SelectorProvider getDefaultProvider() {
+        return defaultProvider;
     }
 
     @Override
-    public DatagramChannel openDatagramChannel(ProtocolFamily family) throws IOException {
-        return selectorProvider.openDatagramChannel(family);
+    public DatagramChannel openDatagramChannel() throws IOException {
+        return defaultProvider.openDatagramChannel();
+    }
+
+    @Override
+    public DatagramChannel openDatagramChannel(ProtocolFamily family)
+        throws IOException {
+        return defaultProvider.openDatagramChannel(family);
     }
 
     @Override
     public Pipe openPipe() throws IOException {
-        return selectorProvider.openPipe();
+        return defaultProvider.openPipe();
     }
 
     @Override
     public AbstractSelector openSelector() throws IOException {
-        return selectorProvider.openSelector();
+        return defaultProvider.openSelector();
     }
 
     @Override

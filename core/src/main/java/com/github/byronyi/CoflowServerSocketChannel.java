@@ -12,23 +12,36 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
 
-class CoflowServerSocketChannel extends ServerSocketChannel implements SelChImpl {
+/**
+ * All methods are delegated except for {@link #accept()}, which returns
+ * a decorated {@link CoflowSocketChannel}.
+ */
+class CoflowServerSocketChannel
+    extends ServerSocketChannel implements SelChImpl {
 
     final private ServerSocketChannel serverSocketChannel;
 
-    protected CoflowServerSocketChannel(CoflowSelectorProvider provider) throws IOException {
+    protected CoflowServerSocketChannel(CoflowSelectorProvider provider)
+        throws IOException {
         super(provider);
-        serverSocketChannel = provider.selectorProvider.openServerSocketChannel();
+        serverSocketChannel =
+            provider.getDefaultProvider().openServerSocketChannel();
+    }
+
+    private SelChImpl getServerSocketChannel() {
+        return (SelChImpl) serverSocketChannel;
     }
 
     @Override
-    public ServerSocketChannel bind(SocketAddress local, int backlog) throws IOException {
+    public ServerSocketChannel bind(SocketAddress local, int backlog)
+        throws IOException {
         serverSocketChannel.bind(local, backlog);
         return this;
     }
 
     @Override
-    public <T> ServerSocketChannel setOption(SocketOption<T> name, T value) throws IOException {
+    public <T> ServerSocketChannel setOption(SocketOption<T> name, T value)
+        throws IOException {
         return serverSocketChannel.setOption(name, value);
     }
 
@@ -73,31 +86,31 @@ class CoflowServerSocketChannel extends ServerSocketChannel implements SelChImpl
 
     @Override
     public FileDescriptor getFD() {
-        return ((SelChImpl) serverSocketChannel).getFD();
+        return getServerSocketChannel().getFD();
     }
 
     @Override
     public int getFDVal() {
-        return ((SelChImpl) serverSocketChannel).getFDVal();
+        return getServerSocketChannel().getFDVal();
     }
 
     @Override
-    public boolean translateAndUpdateReadyOps(int i, SelectionKeyImpl selectionKey) {
-        return ((SelChImpl) serverSocketChannel).translateAndUpdateReadyOps(i, selectionKey);
+    public boolean translateAndUpdateReadyOps(int i, SelectionKeyImpl key) {
+        return getServerSocketChannel().translateAndUpdateReadyOps(i, key);
     }
 
     @Override
-    public boolean translateAndSetReadyOps(int i, SelectionKeyImpl selectionKey) {
-        return ((SelChImpl) serverSocketChannel).translateAndSetReadyOps(i, selectionKey);
+    public boolean translateAndSetReadyOps(int i, SelectionKeyImpl key) {
+        return getServerSocketChannel().translateAndSetReadyOps(i, key);
     }
 
     @Override
-    public void translateAndSetInterestOps(int i, SelectionKeyImpl selectionKey) {
-        ((SelChImpl) serverSocketChannel).translateAndSetInterestOps(i, selectionKey);
+    public void translateAndSetInterestOps(int i, SelectionKeyImpl key) {
+        getServerSocketChannel().translateAndSetInterestOps(i, key);
     }
 
     @Override
     public void kill() throws IOException {
-        ((SelChImpl) serverSocketChannel).kill();
+        getServerSocketChannel().kill();
     }
 }

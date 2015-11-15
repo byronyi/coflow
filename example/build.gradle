@@ -1,13 +1,11 @@
-apply plugin: 'application'
-
-mainClassName = "Server"
-
-applicationDefaultJvmArgs = ["-Djava.nio.channels.spi.SelectorProvider=com.github.byronyi.CoflowSelectorProvider"]
-
-repositories {
-  mavenCentral()
+dependencies {
+    runtime project(':core')
 }
 
-dependencies {
-  compile 'io.netty:netty-all:4.0.33.Final'
+task runExample(type: JavaExec) {
+
+  classpath = sourceSets.main.runtimeClasspath
+  main = 'com.github.byronyi.Server'
+  systemProperties["java.nio.channels.spi.SelectorProvider"] = "com.github.byronyi.CoflowSelectorProvider"
+
 }
