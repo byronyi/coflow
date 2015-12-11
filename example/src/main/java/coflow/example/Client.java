@@ -11,8 +11,12 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 public class Client {
 
     public static void main(String[] args) throws Exception {
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
+        String host = "localhost";
+        int port = 8080;
+        if (args.length > 1) {
+            host = args[0];
+            port = Integer.parseInt(args[1]);
+        }
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {
@@ -27,17 +31,26 @@ public class Client {
                 }
             });
 
-            ChannelFuture f = b.connect(host, port).sync();
-            Channel channel = f.channel();
+            byte[] junk = new byte[1024*1024];
 
-            for (int i = 0; i < 1024; i++) {
-                ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-                for (int j = 0; j < 16*1024; j++) {
-                    byteBuf.writeInt(0);
+            for (int z = 0; z < 10; z++) {
+
+                ChannelFuture f = b.connect(host, port).sync();
+                Channel channel = f.channel();
+
+                long start = System.currentTimeMillis();
+
+                for (int i = 0; i < 100; i++) {
+                    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
+                    byteBuf.writeBytes(junk);
+                    channel.writeAndFlush(byteBuf).sync();
                 }
-                channel.writeAndFlush(byteBuf).sync().await();
+
+                long end = System.currentTimeMillis();
+                channel.close().sync();
+
+                System.out.println("Wrote 100MB in " + (end-start)/1000. + "s");
             }
-            channel.close().sync();
         } finally {
             workerGroup.shutdownGracefully();
         }

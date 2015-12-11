@@ -8,9 +8,9 @@ public class Flow {
     protected final SocketAddress destination;
     protected final long startTime;
 
-    protected final static long MAX_BUCKET_SIZE = 65536;
+    protected final static long MAX_BUCKET_SIZE = 8192; // in Bytes
     protected volatile long bytesWritten = 0;
-    protected volatile int rateLimitBps = 1048576;
+    protected volatile int rateLimitMbps = 1000; // in Mbps
 
     private long bucketSize = MAX_BUCKET_SIZE;
     private long lastUpdate;
@@ -18,7 +18,7 @@ public class Flow {
     public Flow(SocketAddress source, SocketAddress destination) {
         this.source = source;
         this.destination = destination;
-        this.startTime = System.currentTimeMillis();
+        this.startTime = System.nanoTime();
         this.lastUpdate = this.startTime;
         System.out.println("New flow: " + source + " -> " + destination);
     }
@@ -29,12 +29,12 @@ public class Flow {
      * Also refill the number of tokens, to the cap of {@link #MAX_BUCKET_SIZE}
      */
     public boolean canProceed() {
-        long durationMillis = System.currentTimeMillis() - lastUpdate;
-        bucketSize += (durationMillis * (long) rateLimitBps) >> 13;
+        long durationNanos = System.nanoTime() - lastUpdate;
+        bucketSize += ((double) durationNanos * rateLimitMbps) / 8192.;
         if (bucketSize > MAX_BUCKET_SIZE) {
             bucketSize = MAX_BUCKET_SIZE;
         }
-        lastUpdate = System.currentTimeMillis();
+        lastUpdate = System.nanoTime();
 
         return bucketSize > 0;
     }
@@ -50,5 +50,8 @@ public class Flow {
     }
 
     public void close() {
+        long lifetime = System.nanoTime() - startTime;
+        System.out.println("Average rate: " +
+            (bytesWritten * 8192. / lifetime) + " Mbps");
     }
 }

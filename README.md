@@ -1,30 +1,45 @@
 Coflow Client for Java NIO
 ===
 
-Implemented token bucket rate limiting upon ``java.nio.SocketChannel``.
+Token bucket filter (TBF) traffic shaping by instrumentation on ``sun.nio.ch.SocketChannelImpl``.
 
-Currently bucket size and rate limit are hard-coded. Change them in
-``core/src/main/java/com/github/byronyi/CoflowSocketChannel`` as you wish.
+Dependency
+---
+
+Netty
+Javassist
 
 Build
 ---
+
 Require [Gradle](http://gradle.org/) to build.
+
 ```bash
 $ git clone https://github.com/byronyi/coflow
 $ cd coflow
-$ gradle runExample
+$ gradle jar
 ```
-Which runs a simple echo server.
 
-Open another terminal, and use ``nc`` to test it out.
+Find the built library ``(*.jar)`` in ``build/libs``.
+
+Run Example
+---
+
+Run a simple echo server without rate limit.
+
 ```bash
-$ cat (some big files) | nc localhost 8080
+$ gradle runServer
 ```
 
-Return to the last ``gradle runExample`` terminal to see the output.
+In another terminal, run a client with 1Gpbs rate limit.
 
-``Non-comformant traffic`` will print if there is negative number of tokens.
+```bash
+$ gradle runClient
+```
 
-Successful write occurs when there are positive number of tokens, printing
-``Wrote xxx bytes``, indicating how many bytes are written in the last
-``SocketChannel.write`` call.
+Pay attension to the output.
+
+TODO
+---
+
+Currently the rate limit is hard coded in ``src/main/java/coflow/Flow.java``. Modify it so it can receive command line options.
