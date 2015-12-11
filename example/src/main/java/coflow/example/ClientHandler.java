@@ -1,17 +1,14 @@
-package com.github.byronyi;
+package coflow.example;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-/**
- * Simple echo server handler from Netty user guide.
- */
-public class ServerHandler extends ChannelInboundHandlerAdapter {
+public class ClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ctx.write(msg);
-        ctx.flush();
+        ((ByteBuf) msg).release();
     }
 
     @Override
@@ -19,5 +16,4 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         cause.printStackTrace();
         ctx.close();
     }
-
 }

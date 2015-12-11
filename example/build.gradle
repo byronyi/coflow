@@ -1,11 +1,4 @@
 dependencies {
-    runtime project(':core')
-}
-
-task runExample(type: JavaExec) {
-
-  classpath = sourceSets.main.runtimeClasspath
-  main = 'com.github.byronyi.Server'
-  systemProperties["java.nio.channels.spi.SelectorProvider"] = "com.github.byronyi.CoflowSelectorProvider"
-
+    compile 'io.netty:netty-all:4.0.33.Final'
+    runtime project(":agent")
 }
