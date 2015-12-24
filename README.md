@@ -1,4 +1,4 @@
-Coflow Client for Java NIO
+Coflow Client for Java NIO (Level-trigger mode)
 ===
 
 Token bucket filter (TBF) traffic shaping by instrumentation on ``sun.nio.ch.SocketChannelImpl``.
@@ -6,8 +6,12 @@ Token bucket filter (TBF) traffic shaping by instrumentation on ``sun.nio.ch.Soc
 Dependency
 ---
 
-Netty
+Java 8
+Scala 2.11
+Akka
+
 Javassist
+
 
 Build
 ---
@@ -18,28 +22,32 @@ Require [Gradle](http://gradle.org/) to build.
 $ git clone https://github.com/byronyi/coflow
 $ cd coflow
 $ gradle jar
+$ gradle shadowJar # this step for coflow core library with all dependencies
 ```
 
-Find the built library ``(*.jar)`` in ``build/libs``.
+Find the built library ``(*.jar)`` in ``core/build/libs``.
 
-Run Example
+Example
 ---
 
-Run a simple echo server without rate limit.
+Open four terminals.
 
+In the first terminal, start the coflow master.
 ```bash
-$ gradle runServer
+java -cp core/build/libs/coflow-0.0.1-all.jar coflow.CoflowMaster
 ```
 
-In another terminal, run a client with 1Gpbs rate limit.
-
+In the second terminal, start the coflow slave.
 ```bash
-$ gradle runClient
+java -cp core/build/libs/coflow-0.0.1-all.jar coflow.CoflowSlave
 ```
 
-Pay attension to the output.
+In the third one, open a dummy echo server without coflow support.
+```bash
+gradle runServer
+```
 
-TODO
----
-
-Currently the rate limit is hard coded in ``src/main/java/coflow/Flow.java``. Modify it so it can receive command line options.
+In the final termial, open the client to echo server with coflow support.
+```bash
+gradle runClient
+```
