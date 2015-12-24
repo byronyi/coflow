@@ -1,17 +1,16 @@
 Coflow Client for Java NIO (Level-trigger mode)
 ===
 
-Token bucket filter (TBF) traffic shaping by instrumentation on ``sun.nio.ch.SocketChannelImpl``.
+Coflow scheduling by instrumentation on ``sun.nio.ch.SocketChannelImpl``.
 
 Dependency
 ---
 
-Java 8
-Scala 2.11
-Akka
-
-Javassist
-
+* Java 8
+* Scala 2.11
+* Akka
+* Javassist
+* Netty 4 (For running example)
 
 Build
 ---
