@@ -1,0 +1,37 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "1.2.2"
+}
+
+apply plugin: 'scala'
+apply plugin: 'maven-publish'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+sourceSets {
+    main {
+        scala.srcDirs = ["src/main/java", "src/main/scala"]
+        java.srcDirs = []
+    }
+}
+
+dependencies {
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.13'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.13'
+    compile group: 'com.typesafe.akka', name: 'akka-slf4j_2.11', version: '2.4.1'
+    compile group: 'org.scala-lang', name: 'scala-library', version: '2.11.7'
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.11', version: '2.4.1'
+    compile group: 'com.github.romix.akka', name: 'akka-kryo-serialization_2.11', version: '0.4.0'
+}
+
+shadowJar {
+    baseName = 'coflow'
+    append('reference.conf')
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            from components.shadow
+            artifactId = 'coflow'
+        }
+    }
+}

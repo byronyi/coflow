@@ -1,13 +1,13 @@
 dependencies {
     compile 'io.netty:netty-all:4.0.33.Final'
-    runtime project(":agent")
+    compile project(':core')
 }
 
 task runClient(type:JavaExec) {
     main = 'coflow.example.Client'
     classpath = sourceSets.main.runtimeClasspath
-    jvmArgs += '-Xbootclasspath/a:../build/libs/coflow-0.0.1.jar'
-    jvmArgs += '-javaagent:../agent/build/libs/agent-0.0.1.jar'
+    jvmArgs += '-Xbootclasspath/a:../core/build/libs/coflow-0.0.1-all.jar'
+    jvmArgs += '-javaagent:../agent/build/libs/coflow-agent-0.0.1-all.jar'
 }
 
 task runServer(type:JavaExec) {

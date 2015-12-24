@@ -24,7 +24,7 @@ public class Transformer implements ClassFileTransformer {
 
                     // Add flow as a field in SocketChannelImpl
                     classPool.importPackage("coflow");
-                    CtField flow = CtField.make("coflow.Flow flow;", clazz);
+                    CtField flow = CtField.make("CoflowChannel flow;", clazz);
                     clazz.addField(flow);
 
                     // Instrument write method
@@ -32,13 +32,13 @@ public class Transformer implements ClassFileTransformer {
                     for (CtMethod method : methods) {
                         method.insertAfter("if (flow != null) flow.write($_);");
                         method.insertBefore("{" +
-                        "if (flow == null) {" +
-                            "flow = new Flow(localAddress, remoteAddress);" +
-                        "}" +
-                        "if (!flow.canProceed()) {" +
+                            "if (flow == null) {" +
+                            "flow = new CoflowChannel(this);" +
+                            "}" +
+                            "if (!flow.canProceed()) {" +
                             "return 0;" +
-                        "}" +
-                        "}");
+                            "}" +
+                            "}");
                     }
 
                     // Instrument close method

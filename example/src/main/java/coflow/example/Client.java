@@ -1,5 +1,6 @@
 package coflow.example;
 
+import coflow.CoflowClient$;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -8,10 +9,12 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.net.InetAddress;
+
 public class Client {
 
     public static void main(String[] args) throws Exception {
-        String host = "localhost";
+        String host = InetAddress.getLocalHost().getHostAddress();
         int port = 8080;
         if (args.length > 1) {
             host = args[0];
@@ -31,12 +34,15 @@ public class Client {
                 }
             });
 
-            byte[] junk = new byte[1024*1024];
+            byte[] junk = new byte[1024 * 1024];
 
             for (int z = 0; z < 10; z++) {
 
                 ChannelFuture f = b.connect(host, port).sync();
                 Channel channel = f.channel();
+
+                CoflowClient$.MODULE$.register(channel.localAddress(),
+                    channel.remoteAddress(), "test" + z);
 
                 long start = System.currentTimeMillis();
 
@@ -49,7 +55,7 @@ public class Client {
                 long end = System.currentTimeMillis();
                 channel.close().sync();
 
-                System.out.println("Wrote 100MB in " + (end-start)/1000. + "s");
+                System.out.println("Wrote 100MB in " + (end - start) / 1000. + "s");
             }
         } finally {
             workerGroup.shutdownGracefully();
