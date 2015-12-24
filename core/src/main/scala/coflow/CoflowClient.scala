@@ -38,19 +38,23 @@ object CoflowClient {
     }
 
     private[coflow] def open(channel: CoflowChannel) {
-        if (channel.flow.srcPort == CoflowSlave.port ||
-            channel.flow.dstPort == CoflowSlave.port ||
-            channel.flow.srcPort == CoflowMaster.port ||
-            channel.flow.dstPort == CoflowMaster.port) {
+        val flow = channel.flow()
+        if (flow.srcPort == CoflowSlave.port ||
+            flow.dstPort == CoflowSlave.port ||
+            flow.srcPort == CoflowMaster.port ||
+            flow.dstPort == CoflowMaster.port) {
         }
         else {
-            flowToChannel(channel.flow) = channel
+            flowToChannel(flow) = channel
         }
+        logger.trace(s"$flow started writing")
     }
 
     private[coflow] def close(channel: CoflowChannel) {
-        flowToChannel -= channel.flow
-        flowToCoflow -= channel.flow
+        val flow = channel.flow
+        flowToChannel -= flow
+        flowToCoflow -= flow
+        logger.trace(s"$flow finishes with size ${channel.getBytesSent} bytes")
     }
 
     private[coflow] class ClientActor extends Actor {

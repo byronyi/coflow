@@ -73,9 +73,7 @@ final public class CoflowChannel {
     }
 
     public void close() {
-        CoflowClient$.MODULE$.close(this);
-        long lifetime = flow.lifetime();
-        logger.trace("{} finishes with rate {} Mbps ({} ms, {} MB)", flow, bytesWritten / (lifetime << 7), lifetime, bytesWritten >> 20);
+        CoflowClient.close(this);
     }
 
     protected SocketChannel javaChannel() {
