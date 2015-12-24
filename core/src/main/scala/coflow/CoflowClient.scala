@@ -26,9 +26,9 @@ object CoflowClient {
 
     ActorSystem("coflowClient").actorOf(Props[ClientActor])
 
-    def register(source: SocketAddress,
-                 destination: SocketAddress,
-                 coflowId: String) = {
+    private[coflow] def register(source: SocketAddress,
+                                 destination: SocketAddress,
+                                 coflowId: String) = {
         val src = source.asInstanceOf[InetSocketAddress]
         val dst = destination.asInstanceOf[InetSocketAddress]
         val flow = Flow(src.getAddress.getHostAddress, src.getPort,

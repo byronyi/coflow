@@ -26,7 +26,7 @@ public class HadoopShuffleTransformer implements ClassFileTransformer {
                     // Instrument write method
                     CtMethod methods[] = clazz.getDeclaredMethods("verifyRequest");
                     for (CtMethod method : methods) {
-                        method.insertAfter("coflow.CoflowChannel.register(" +
+                        method.insertAfter("CoflowChannel.register(" +
                             "ctx.getChannel().getLocalAddress()," +
                             "ctx.getChannel().getRemoteAddress()," +
                             "$1" +

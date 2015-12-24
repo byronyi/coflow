@@ -40,7 +40,7 @@ final public class CoflowChannel {
     public static void register(SocketAddress source, SocketAddress destination, String coflowId) {
         InetSocketAddress src = (InetSocketAddress) source;
         InetSocketAddress dst = (InetSocketAddress) destination;
-        CoflowClient.register(src, dst, coflowId);
+        CoflowClient$.MODULE$.register(src, dst, coflowId);
     }
 
     /**
@@ -73,7 +73,7 @@ final public class CoflowChannel {
     }
 
     public void close() {
-        CoflowClient.close(this);
+        CoflowClient$.MODULE$.close(this);
     }
 
     protected SocketChannel javaChannel() {
