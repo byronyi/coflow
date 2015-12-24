@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -34,7 +33,8 @@ private[coflow] object CoflowMaster {
         val actorSystem = ActorSystem("coflowMaster", conf)
         actorSystem.actorOf(Props[MasterActor], "master")
 
-        Await.result(actorSystem.whenTerminated, Duration.Inf)
+        actorSystem.awaitTermination()
+        // Await.result(actorSystem.whenTerminated, Duration.Inf)
     }
 
     def clustering(flows: Array[Flow]): Map[String, Array[Flow]] = {
@@ -50,12 +50,12 @@ private[coflow] object CoflowMaster {
                 currentCluster += 1
             }
             lastStartTime = flows(i).startTime
-            currentCluster
+            currentCluster.toString
         })
 
-        clusterIds.zip(sortedIndices).groupBy(_._1).map {
-            case (id, tuples) =>
-                (id.toString, tuples.map(tuple => flows(tuple._2)).toArray)
+        // Perform an group by on indices, with key as cluster id
+        clusterIds.zip(sortedIndices).groupBy(_._1).mapValues {
+            indices => indices.map(idx => flows(idx._2)).toArray
         }
 
     }
@@ -63,9 +63,8 @@ private[coflow] object CoflowMaster {
     def getSchedule(slaves: Array[String],
                     coflows: Map[String, Map[Flow, Long]]): Map[String, Array[Flow]] = {
 
-        val sortedCoflow = coflows.map({
-            case (coflowId, flowSizes) => (coflowId, flowSizes.values.sum)
-        }).toArray.sortBy(_._2).map(_._1)
+        // TODO: sorted on specific keys to customize the ordering of coflow
+        val sortedCoflow = coflows.mapValues(_.values.sum).toArray.sortBy(_._2).map(_._1)
 
         val slaveFlows = slaves.map(_ -> ArrayBuffer[Flow]()).toMap
 
@@ -101,9 +100,9 @@ private[coflow] object CoflowMaster {
 
                 val phase1 = System.currentTimeMillis
 
-                val coflows = slaveToCoflows.values.flatMap(_.coflows).groupBy(_._1).map({
-                    case (k, vs) => (k, vs.map(_._2).fold(mutable.Map[Flow, Long]())(_ ++ _).toMap)
-                })
+                val coflows = slaveToCoflows.values.flatMap(_.coflows).groupBy(_._1).mapValues {
+                    _.map(_._2).fold(mutable.Map[Flow, Long]())(_ ++ _).toMap
+                }
                 val flowSize = coflows.values.fold(mutable.Map[Flow, Long]())(_ ++ _).toMap
 
                 val cluster = clustering(flowSize.keys.toArray)
@@ -115,9 +114,9 @@ private[coflow] object CoflowMaster {
 
                 val phase3 = System.currentTimeMillis
 
-                val flowClusters = cluster.map({
-                    case (k, fs) => (k, fs.map(f => (f, flowSize(f))).toMap)
-                })
+                val flowClusters = cluster.mapValues {
+                    _.map(f => (f, flowSize(f))).toMap
+                }
                 val schedule = getSchedule(ipToSlave.keys.toArray, flowClusters)
 
                 schedule.foreach {

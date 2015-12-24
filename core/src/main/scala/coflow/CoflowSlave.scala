@@ -23,6 +23,10 @@ private[coflow] object CoflowSlave {
     val host = InetAddress.getLocalHost.getHostAddress
     val port = 1607
 
+    val masterIp = Option(System.getenv("VARYS_MASTER_IP")).getOrElse(host)
+    val masterPort = 1606
+    val masterUrl = "akka.tcp://coflowMaster@%s:%s/user/master".format(masterIp, masterPort)
+
     val flowToClient = TrieMap[Flow, ActorRef]()
     val dstFlowQueue = TrieMap[String, ConcurrentLinkedQueue[Flow]]()
     val clientToCoflows = TrieMap[ActorRef, ClientCoflows]()
@@ -36,14 +40,11 @@ private[coflow] object CoflowSlave {
         val actorSystem = ActorSystem("coflowSlave", conf)
         actorSystem.actorOf(Props[SlaveActor], "slave")
 
-        Await.result(actorSystem.whenTerminated, Duration.Inf)
+        actorSystem.awaitTermination()
+        // Await.result(actorSystem.whenTerminated, Duration.Inf)
     }
 
     private[coflow] class SlaveActor extends Actor {
-
-        val masterIp = Option(System.getenv("VARYS_MASTER_IP")).getOrElse(host)
-        val masterPort = 1606
-        val masterUrl = "akka.tcp://coflowMaster@%s:%s/user/master".format(masterIp, masterPort)
 
         val master = {
             try {
@@ -72,9 +73,8 @@ private[coflow] object CoflowSlave {
 
             case ClientCoflows(coflows) =>
 
-                coflows.foreach {
-                    case (coflowId, flowSize) =>
-                        flowSize.keys.foreach(flowToClient(_) = sender)
+                coflows.values.foreach { flowSize =>
+                    flowSize.keys.foreach(flowToClient(_) = sender)
                 }
                 clientToCoflows(sender) = ClientCoflows(coflows)
                 context.watch(sender)
@@ -83,8 +83,6 @@ private[coflow] object CoflowSlave {
                 disconnect(actor)
 
             case StartSome(flows) =>
-
-                logger.trace("Received StartSome for {}", flows)
 
                 dstFlowQueue.clear()
 
@@ -112,7 +110,6 @@ private[coflow] object CoflowSlave {
                                     mutable.Map[Flow, Long]())(_ ++ _).toMap)
                         }
                     actor ! LocalCoflows(host, coflows)
-                    logger.trace("Sending LocalCoflows with {} coflows", coflows.size)
                 })
         }
 
@@ -133,7 +130,6 @@ private[coflow] object CoflowSlave {
             })
 
             clientToCoflows -= actor
-            logger.trace("Client {} disconnected", actor)
         }
 
     }

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
 
@@ -30,11 +31,16 @@ final public class CoflowChannel {
         InetSocketAddress dst = (InetSocketAddress) channel.getRemoteAddress();
 
         javaChannel = channel;
-        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(),
-            dst.getAddress().getHostAddress(), dst.getPort());
+        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
         lastUpdate = System.nanoTime();
 
         CoflowClient$.MODULE$.open(this);
+    }
+
+    public static void register(SocketAddress source, SocketAddress destination, String coflowId) {
+        InetSocketAddress src = (InetSocketAddress) source;
+        InetSocketAddress dst = (InetSocketAddress) destination;
+        CoflowClient.register(src, dst, coflowId);
     }
 
     /**
@@ -69,8 +75,7 @@ final public class CoflowChannel {
     public void close() {
         CoflowClient$.MODULE$.close(this);
         long lifetime = flow.lifetime();
-        logger.trace("{} finishes with rate {} Mbps ({} ms, {} MB)", flow,
-            bytesWritten / (lifetime << 7), lifetime, bytesWritten >> 20);
+        logger.trace("{} finishes with rate {} Mbps ({} ms, {} MB)", flow, bytesWritten / (lifetime << 7), lifetime, bytesWritten >> 20);
     }
 
     protected SocketChannel javaChannel() {

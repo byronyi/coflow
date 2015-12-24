@@ -1,6 +1,6 @@
 package coflow
 
-case class Flow(srcIp: String, sourcePort: Int,
+case class Flow(srcIp: String, srcPort: Int,
                 dstIp: String, dstPort: Int) extends Serializable {
     val startTime = System.currentTimeMillis
 

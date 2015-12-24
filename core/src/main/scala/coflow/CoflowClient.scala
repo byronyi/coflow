@@ -17,6 +17,10 @@ object CoflowClient {
 
     private val logger = LoggerFactory.getLogger(CoflowClient.getClass)
 
+    val host = InetAddress.getLocalHost.getHostAddress
+    val slavePort = CoflowSlave.port
+    val slaveUrl = "akka.tcp://coflowSlave@%s:%s/user/slave".format(host, slavePort)
+
     private val flowToChannel = TrieMap[Flow, CoflowChannel]()
     private val flowToCoflow = TrieMap[Flow, String]()
 
@@ -30,10 +34,18 @@ object CoflowClient {
         val flow = Flow(src.getAddress.getHostAddress, src.getPort,
             dst.getAddress.getHostAddress, dst.getPort)
         flowToCoflow(flow) = coflowId
+        logger.trace(s"$flow registered with coflow id $coflowId")
     }
 
     private[coflow] def open(channel: CoflowChannel) {
-        flowToChannel(channel.flow) = channel
+        if (channel.flow.srcPort == CoflowSlave.port ||
+            channel.flow.dstPort == CoflowSlave.port ||
+            channel.flow.srcPort == CoflowMaster.port ||
+            channel.flow.dstPort == CoflowMaster.port) {
+        }
+        else {
+            flowToChannel(channel.flow) = channel
+        }
     }
 
     private[coflow] def close(channel: CoflowChannel) {
@@ -42,10 +54,6 @@ object CoflowClient {
     }
 
     private[coflow] class ClientActor extends Actor {
-
-        val host = InetAddress.getLocalHost.getHostAddress
-        val slavePort = 1607
-        val slaveUrl = "akka.tcp://coflowSlave@%s:%s/user/slave".format(host, slavePort)
 
         val slave = {
             try {
@@ -78,16 +86,13 @@ object CoflowClient {
                 flowToChannel.get(flow).foreach(_.pause())
             case MergeAndSync =>
                 slave.foreach(actor => {
-                    val coflows = flowToCoflow.groupBy(_._2).map {
-                        case (coflowId, flows) => (
-                            coflowId, flows.keys.flatMap(flowToChannel.get)
-                            .map(
-                                channel => (
-                                    channel.flow(), channel.bytesWritten))
-                            .toMap)
-                    }
+                    val coflows = flowToCoflow.groupBy(_._2).mapValues {
+                        case flows =>
+                            flows.keys.map { flow =>
+                                (flow, flowToChannel.get(flow).map(_.getBytesSent).sum)
+                            }.toMap
+                    }.map(identity) // Workaround for https://issues.scala-lang.org/browse/SI-7005
                     actor ! ClientCoflows(coflows)
-                    logger.trace("Sending ClientCoflows with {} coflows", coflows.size)
                 })
         }
     }
