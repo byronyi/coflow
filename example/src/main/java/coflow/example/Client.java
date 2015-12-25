@@ -1,6 +1,6 @@
 package coflow.example;
 
-import coflow.CoflowClient$;
+import coflow.CoflowChannel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -41,7 +41,7 @@ public class Client {
                 ChannelFuture f = b.connect(host, port).sync();
                 Channel channel = f.channel();
 
-                CoflowClient$.MODULE$.register(channel.localAddress(),
+                CoflowChannel.register(channel.localAddress(),
                     channel.remoteAddress(), "test" + z);
 
                 long start = System.currentTimeMillis();

@@ -4,6 +4,7 @@ plugins {
 
 apply plugin: 'scala'
 apply plugin: 'maven-publish'
+
 apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceSets {
@@ -14,16 +15,24 @@ sourceSets {
 }
 
 dependencies {
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.13'
-    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.13'
-    compile group: 'com.typesafe.akka', name: 'akka-slf4j_2.11', version: '2.3.14'
-    compile group: 'com.typesafe.akka', name: 'akka-remote_2.11', version: '2.3.14'
-    compile group: 'com.github.romix.akka', name: 'akka-kryo-serialization_2.11', version: '0.3.3'
+    compile 'org.scala-lang:scala-library:2.11.5'
+    compile 'com.typesafe.akka:akka-slf4j_2.11:2.3.14'
+    compile 'com.typesafe.akka:akka-remote_2.11:2.3.14'
+    compile 'org.javassist:javassist:3.20.0-GA'
+    compile 'org.slf4j:slf4j-api:1.7.13'
+    compile 'org.slf4j:slf4j-log4j12:1.7.13'
+    compile 'com.github.romix.akka:akka-kryo-serialization_2.11:0.3.3'
 }
 
 shadowJar {
     baseName = 'coflow'
     append('reference.conf')
+    manifest {
+        attributes(
+                "Premain-Class": "coflow.agent.Agent",
+                "Boot-Class-Path": archiveName
+        )
+    }
 }
 
 publishing {

@@ -1,1 +1,1 @@
-include "agent", "example", "core"
+include "example", "core"
