@@ -86,15 +86,19 @@ object CoflowClient {
         override def receive = {
             case Start(flow) =>
                 flowToChannel.get(flow).foreach(_.start())
-            case Pause(flow) =>
-                flowToChannel.get(flow).foreach(_.pause())
+
+            case PauseAll =>
+                // Only those registered flows may be paused
+                flowToCoflow.keys.foreach {
+                    flowToChannel.get(_).foreach(_.pause())
+                }
+
             case MergeAndSync =>
                 slave.foreach(actor => {
                     val coflows = flowToCoflow.groupBy(_._2).mapValues {
-                        case flows =>
-                            flows.keys.map { flow =>
-                                (flow, flowToChannel.get(flow).map(_.getBytesSent).sum)
-                            }.toMap
+                        _.keys.map { flow =>
+                            (flow, flowToChannel.get(flow).map(_.getBytesSent).sum)
+                        }.toMap
                     }.map(identity) // Workaround for https://issues.scala-lang.org/browse/SI-7005
                     actor ! ClientCoflows(coflows)
                 })

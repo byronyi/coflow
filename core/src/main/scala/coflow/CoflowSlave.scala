@@ -4,6 +4,7 @@ import java.net.InetAddress
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.actor._
+import akka.remote.DisassociatedEvent
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
@@ -27,9 +28,11 @@ private[coflow] object CoflowSlave {
     val masterPort = 1606
     val masterUrl = "akka.tcp://coflowMaster@%s:%s/user/master".format(masterIp, masterPort)
 
+    val addressToClient = TrieMap[Address, ActorRef]()
+    val clientToCoflows = TrieMap[ActorRef, ClientCoflows]()
+
     val flowToClient = TrieMap[Flow, ActorRef]()
     val dstFlowQueue = TrieMap[String, ConcurrentLinkedQueue[Flow]]()
-    val clientToCoflows = TrieMap[ActorRef, ClientCoflows]()
 
     def main(argStrings: Array[String]): Unit = {
 
@@ -38,10 +41,11 @@ private[coflow] object CoflowSlave {
         ).withFallback(ConfigFactory.load())
 
         val actorSystem = ActorSystem("coflowSlave", conf)
-        actorSystem.actorOf(Props[SlaveActor], "slave")
+        val slave = actorSystem.actorOf(Props[SlaveActor], "slave")
+
+        actorSystem.eventStream.subscribe(slave, classOf[DisassociatedEvent])
 
         actorSystem.awaitTermination()
-        // Await.result(actorSystem.whenTerminated, Duration.Inf)
     }
 
     private[coflow] class SlaveActor extends Actor {
@@ -73,26 +77,25 @@ private[coflow] object CoflowSlave {
 
             case ClientCoflows(coflows) =>
 
-                coflows.values.foreach { flowSize =>
-                    flowSize.keys.foreach(flowToClient(_) = sender)
+                coflows.values.flatMap(_.keys).foreach {
+                    flowToClient(_) = sender
                 }
                 clientToCoflows(sender) = ClientCoflows(coflows)
-                context.watch(sender)
+                addressToClient(sender.path.address) = sender
 
-            case Terminated(actor) =>
-                disconnect(actor)
+            case d: DisassociatedEvent =>
 
-            case StartSome(flows) =>
+                addressToClient.get(d.remoteAddress).foreach(disconnect)
+                addressToClient -= d.remoteAddress
+
+            case FlowPriorityQueue(flows) =>
+
+                clientToCoflows.keys.foreach(_ ! PauseAll)
 
                 dstFlowQueue.clear()
-
                 for (f <- flows) {
-                    flowToClient.get(f).foreach(actor => {
-                        actor ! Pause(f)
-                        dstFlowQueue.putIfAbsent(f.dstIp,
-                            new ConcurrentLinkedQueue[Flow])
-                        dstFlowQueue(f.dstIp).add(f)
-                    })
+                    dstFlowQueue(f.dstIp) = new ConcurrentLinkedQueue[Flow]
+                    dstFlowQueue(f.dstIp).add(f)
                 }
 
                 for (flowQueue <- dstFlowQueue.values) {
@@ -100,16 +103,13 @@ private[coflow] object CoflowSlave {
                 }
 
             case MergeAndSync =>
+
                 master.foreach(actor => {
-                    val coflows = clientToCoflows.values
-                        .flatMap(_.coflows)
-                        .groupBy(_._1)
-                        .map {
-                            case (k, vs) =>
-                                (k, vs.map(_._2).fold(
-                                    mutable.Map[Flow, Long]())(_ ++ _).toMap)
-                        }
-                    actor ! LocalCoflows(host, coflows)
+                    val coflows = clientToCoflows.values.flatMap(_.coflows)
+                        .groupBy(_._1).mapValues {
+                        _.map(_._2).fold(mutable.Map[Flow, Long]())(_ ++ _).toMap
+                    }.map(identity)
+                    actor ! SlaveCoflows(host, coflows)
                 })
         }
 
@@ -119,15 +119,15 @@ private[coflow] object CoflowSlave {
 
         def disconnect(actor: ActorRef) = {
 
-            clientToCoflows.get(actor).foreach(message => {
-                message.coflows.values.flatMap(_.keys).foreach(flow => {
-                    flowToClient -= flow
-
-                    dstFlowQueue.get(flow.dstIp).foreach {
-                        queue => Option(queue.poll()).foreach(startOne)
-                    }
-                })
-            })
+            clientToCoflows.get(actor).foreach {
+                case ClientCoflows(coflows) =>
+                    coflows.values.flatMap(_.keys).foreach(flow => {
+                        flowToClient -= flow
+                        dstFlowQueue.get(flow.dstIp).foreach {
+                            queue => Option(queue.poll).foreach(startOne)
+                        }
+                    })
+            }
 
             clientToCoflows -= actor
         }

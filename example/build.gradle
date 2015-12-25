@@ -6,7 +6,6 @@ dependencies {
 task runClient(type:JavaExec, dependsOn:':core:shadowJar') {
     main = 'coflow.example.Client'
     classpath = sourceSets.main.runtimeClasspath
-    // jvmArgs += '-Xbootclasspath/a:../core/build/libs/coflow-0.0.1-all.jar'
     jvmArgs += '-javaagent:../core/build/libs/coflow-0.0.1-all.jar'
 }
 
