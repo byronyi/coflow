@@ -15,13 +15,18 @@ sourceSets {
 }
 
 dependencies {
-    compile 'org.scala-lang:scala-library:2.11.5'
-    compile 'com.typesafe.akka:akka-slf4j_2.11:2.3.14'
-    compile 'com.typesafe.akka:akka-remote_2.11:2.3.14'
+    compile 'org.scala-lang:scala-library:2.10.4'
+    compile 'com.typesafe.akka:akka-slf4j_2.10:2.3.14'
+    compile 'com.typesafe.akka:akka-remote_2.10:2.3.14'
+    compile 'com.github.romix.akka:akka-kryo-serialization_2.10:0.3.2'
+
     compile 'org.javassist:javassist:3.20.0-GA'
     compile 'org.slf4j:slf4j-api:1.7.13'
     compile 'org.slf4j:slf4j-log4j12:1.7.13'
-    compile 'com.github.romix.akka:akka-kryo-serialization_2.11:0.3.3'
+}
+
+jar {
+  baseName = 'coflow'
 }
 
 shadowJar {

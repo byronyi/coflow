@@ -20,7 +20,8 @@ Require [Gradle](http://gradle.org/) to build.
 ```bash
 $ git clone https://github.com/byronyi/coflow
 $ cd coflow
-$ gradle shadowJar # this step for coflow core library with all dependencies
+$ gradle jar # for normal compilation
+$ gradle shadowJar # this step for coflow runtime with all dependencies
 ```
 
 Find the built library ``(*.jar)`` in ``core/build/libs``.
