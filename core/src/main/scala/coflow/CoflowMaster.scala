@@ -17,26 +17,23 @@ private[coflow] object CoflowMaster {
 
     val REMOTE_SYNC_PERIOD_MILLIS = 1000
 
-    val logger = LoggerFactory.getLogger(CoflowMaster.getClass)
-
     val host = InetAddress.getLocalHost.getHostAddress
     val port = 1606
 
-    val addressToSlave = TrieMap[Address, ActorRef]()
-    val ipToSlave = TrieMap[String, ActorRef]()
-    val slaveToCoflows = TrieMap[ActorRef, SlaveCoflows]()
+    private val logger = LoggerFactory.getLogger(CoflowMaster.getClass)
 
-    def main(args: Array[String]) {
+    private val addressToSlave = TrieMap[Address, ActorRef]()
+    private val ipToSlave = TrieMap[String, ActorRef]()
+    private val slaveToCoflows = TrieMap[ActorRef, SlaveCoflows]()
 
-        val conf = ConfigFactory.parseString(
-            "akka.remote.netty.tcp.port=%s".format(port)
-        ).withFallback(ConfigFactory.load())
+    def main(args: Array[String]) = {
+
+        val conf = ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port").withFallback(ConfigFactory.load())
 
         val actorSystem = ActorSystem("coflowMaster", conf)
         val master = actorSystem.actorOf(Props[MasterActor], "master")
 
         actorSystem.eventStream.subscribe(master, classOf[DisassociatedEvent])
-
         actorSystem.awaitTermination()
     }
 
@@ -106,11 +103,7 @@ private[coflow] object CoflowMaster {
     private[coflow] class MasterActor extends Actor {
 
         override def preStart = {
-
-            context.system.scheduler.schedule(1.second,
-                REMOTE_SYNC_PERIOD_MILLIS.millis) {
-                self ! MergeAndSync
-            }
+            context.system.scheduler.schedule(0.second, REMOTE_SYNC_PERIOD_MILLIS.millis, self, MergeAndSync)
         }
 
         override def receive = {
@@ -162,10 +155,8 @@ private[coflow] object CoflowMaster {
                 val phase4 = System.currentTimeMillis
 
                 if (flowSize.nonEmpty) {
-                    logger.trace(s" ${flowSize.size} flows, " +
-                        s"clustering: ${phase2 - phase1} ms, " +
-                        s"scoring: ${phase3 - phase2} ms, " +
-                        s"schedule: ${phase4 - phase3} ms")
+                    logger.trace(s" ${flowSize.size} flows, clustering: ${phase2 - phase1} ms, " +
+                        s"scoring: ${phase3 - phase2} ms, schedule: ${phase4 - phase3} ms")
                 }
         }
     }

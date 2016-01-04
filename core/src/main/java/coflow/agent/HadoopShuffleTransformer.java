@@ -23,14 +23,13 @@ public class HadoopShuffleTransformer implements ClassFileTransformer {
 
                     classPool.importPackage("coflow");
 
-                    // Instrument write method
                     CtMethod methods[] = clazz.getDeclaredMethods("verifyRequest");
                     for (CtMethod method : methods) {
                         method.insertAfter("CoflowChannel.register(" +
                             "ctx.getChannel().getLocalAddress()," +
                             "ctx.getChannel().getRemoteAddress()," +
                             "$1" +
-                            ");");
+                        ");");
                     }
 
                     byteCode = clazz.toBytecode();

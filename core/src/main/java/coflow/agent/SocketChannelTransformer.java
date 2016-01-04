@@ -33,12 +33,12 @@ public class SocketChannelTransformer implements ClassFileTransformer {
                         method.insertAfter("if (flow != null) flow.write($_);");
                         method.insertBefore("{" +
                             "if (flow == null) {" +
-                            "flow = new CoflowChannel(this);" +
+                                "flow = new CoflowChannel(this);" +
                             "}" +
                             "if (!flow.canProceed()) {" +
-                            "return 0;" +
+                                "return 0;" +
                             "}" +
-                            "}");
+                        "}");
                     }
 
                     // Instrument close method

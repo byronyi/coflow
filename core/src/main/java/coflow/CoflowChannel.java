@@ -8,6 +8,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 final public class CoflowChannel {
 
@@ -16,6 +18,8 @@ final public class CoflowChannel {
     final private SocketChannel javaChannel;
 
     final private Flow flow;
+
+    static final private ConcurrentMap<Object, String> keyToCoflowId = new ConcurrentHashMap<>();
 
     final protected static long MAX_BUCKET_SIZE = 1024 * 1024; // in Bytes
     protected volatile long bytesWritten = 0;
@@ -41,6 +45,22 @@ final public class CoflowChannel {
         InetSocketAddress src = (InetSocketAddress) source;
         InetSocketAddress dst = (InetSocketAddress) destination;
         CoflowClient$.MODULE$.register(src, dst, coflowId);
+    }
+
+    /**
+      Sometimes it's just impossible to get the coflow information
+      within the same stack of java channel. It's then useful
+      to use 1 level indirection to get the information we need.
+     */
+    public static void register0(Object key, String coflowId) {
+        keyToCoflowId.put(key, coflowId);
+    }
+
+    public static void register1(Object key, SocketAddress source, SocketAddress destination) {
+        String coflowId = keyToCoflowId.remove(key);
+        if (coflowId != null) {
+            register(source, destination, coflowId);
+        }
     }
 
     /**
