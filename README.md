@@ -1,14 +1,14 @@
-Coflow Client for Java NIO (Level-trigger mode)
+Coflow Framework
 ===
 
-Coflow scheduling by instrumentation on ``sun.nio.ch.SocketChannelImpl``.
+Coflow scheduling in Java.
 
 Dependency
 ---
 
 * Java 8
-* Scala 2.11
-* Akka
+* Scala 2.10
+* Akka 2.3
 * Javassist
 * Netty 4 (For running example)
 
@@ -20,8 +20,8 @@ Require [Gradle](http://gradle.org/) to build.
 ```bash
 $ git clone https://github.com/byronyi/coflow
 $ cd coflow
-$ gradle jar # for normal compilation
-$ gradle shadowJar # this step for coflow runtime with all dependencies
+$ gradle jar # for compile-time dependency
+$ gradle shadowJar # for runtime linking and all its dependencies
 ```
 
 Find the built library ``(*.jar)`` in ``core/build/libs``.
