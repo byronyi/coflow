@@ -26,7 +26,16 @@ $ gradle shadowJar # for runtime linking and all its dependencies
 
 Find the built library ``(*.jar)`` in ``core/build/libs``.
 
-Example
+Usage
+---
+
+Just add ``-javaagent:/path/to/coflow-{version}-all.jar`` to your Java virtual machine start up options so you can use the library.
+
+In the client, use ``coflow.CoflowChannel.register(localAddress, remoteAddress, coflowId)`` to register you coflow. Then the TCP stream of this local and remote address will be scheduled by the coflow framework!
+
+See ``example/main/java/coflow/example/Client.java`` for detailed example.
+
+How to Run Example
 ---
 
 Open four terminals.

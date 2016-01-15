@@ -5,7 +5,7 @@ allprojects {
     group 'coflow'
     version '0.0.1'
 
-    sourceCompatibility = 1.8
+    sourceCompatibility = 1.7
 
     repositories {
         mavenCentral()
