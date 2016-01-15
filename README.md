@@ -6,11 +6,15 @@ Coflow scheduling in Java.
 Dependency
 ---
 
-* Java 8
+Note that with the all-in-one jar, there is no need to specify the dependencies manually.
+
 * Scala 2.10
-* Akka 2.3
-* Javassist
+* Akka 2.3.14 (with netty 3.8.0.Final and protobuf-java 2.5.0)
+* Javassist 3.20
 * Netty 4 (For running example)
+
+This dependencies is compatible with Hadoop 2.7.1 and Spark 1.6.
+
 
 Build
 ---
