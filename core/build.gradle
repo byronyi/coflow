@@ -23,6 +23,17 @@ dependencies {
     compile 'org.javassist:javassist:3.20.0-GA'
     compile 'org.slf4j:slf4j-api:1.7.13'
     compile 'org.slf4j:slf4j-log4j12:1.7.13'
+
+    testCompile 'junit:junit:4.12'
+}
+
+def javaSrcDir = new File("${projectDir}/src/main/java/netlink/swig")
+def swigFile = new File("${projectDir}/src/main/jni/libnl-3/capi.i")
+
+task runSwig(type:Exec) {
+    commandLine 'swig'
+    javaSrcDir.mkdirs()
+    args '-java', '-package', 'netlink.swig', '-outdir', javaSrcDir.absolutePath, swigFile.absolutePath
 }
 
 jar {

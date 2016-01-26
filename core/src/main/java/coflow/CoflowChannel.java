@@ -1,103 +1,60 @@
 package coflow;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 final public class CoflowChannel {
 
-    final private Logger logger = LoggerFactory.getLogger(CoflowChannel.class);
-
-    final private SocketChannel javaChannel;
+    final static private ConcurrentMap<Object, String> keyToCoflowId = new ConcurrentHashMap<>();
 
     final private Flow flow;
+    final protected AtomicLong bytesWritten = new AtomicLong(0L);
 
-    static final private ConcurrentMap<Object, String> keyToCoflowId = new ConcurrentHashMap<>();
-
-    final protected static long MAX_BUCKET_SIZE = 1024 * 1024; // in Bytes
-    protected volatile long bytesWritten = 0;
-    protected volatile int rateLimitMbps = 1000; // in Mbps
-    protected volatile boolean canProceed = true;
-
-    private long bucketSize = MAX_BUCKET_SIZE;
-    private long lastUpdate;
-
-    public CoflowChannel(SocketChannel channel) throws IOException {
-
-        InetSocketAddress src = (InetSocketAddress) channel.getLocalAddress();
-        InetSocketAddress dst = (InetSocketAddress) channel.getRemoteAddress();
-
-        javaChannel = channel;
-        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
-        lastUpdate = System.nanoTime();
-
-        CoflowClient$.MODULE$.open(this);
-    }
-
-    public static void register(SocketAddress source, SocketAddress destination, String coflowId) {
+    static public void register(SocketAddress source, SocketAddress destination, String coflowId) {
         InetSocketAddress src = (InetSocketAddress) source;
         InetSocketAddress dst = (InetSocketAddress) destination;
-        CoflowClient$.MODULE$.register(src, dst, coflowId);
+
+        Flow flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
+
+        CoflowClient$.MODULE$.register(flow, coflowId);
     }
 
-    /**
-      Sometimes it's just impossible to get the coflow information
-      within the same stack of java channel. It's then useful
-      to use 1 level indirection to get the information we need.
-     */
-    public static void register0(Object key, String coflowId) {
+    static public void register0(Object key, String coflowId) {
         keyToCoflowId.put(key, coflowId);
     }
 
-    public static void register1(Object key, SocketAddress source, SocketAddress destination) {
+    static public void register1(Object key, SocketAddress source, SocketAddress destination) {
         String coflowId = keyToCoflowId.remove(key);
         if (coflowId != null) {
             register(source, destination, coflowId);
         }
     }
 
-    /**
-     * @return Whether this socket has remaining tokens for outbound traffic.
-     * <p>
-     * Also refill the number of tokens, to the cap of {@link #MAX_BUCKET_SIZE}
-     */
-    public boolean canProceed() {
-        if (!canProceed) {
-            return false;
-        }
-        long durationNanos = System.nanoTime() - lastUpdate;
-        bucketSize += (durationNanos * rateLimitMbps) >> 13;
-        if (bucketSize > MAX_BUCKET_SIZE) {
-            bucketSize = MAX_BUCKET_SIZE;
-        }
-        lastUpdate = System.nanoTime();
+    public CoflowChannel(SocketChannel channel) throws IOException {
 
-        return bucketSize > 0;
+        InetSocketAddress src = (InetSocketAddress) channel.getLocalAddress();
+        InetSocketAddress dst = (InetSocketAddress) channel.getRemoteAddress();
+
+        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
+
+        CoflowClient$.MODULE$.open(this);
     }
 
     public void write(int size) {
-        bucketSize -= size;
-        bytesWritten += size;
+        write((long) size);
     }
 
     public void write(long size) {
-        bucketSize -= size;
-        bytesWritten += size;
+        bytesWritten.addAndGet(size);
     }
 
     public void close() {
         CoflowClient$.MODULE$.close(this);
-    }
-
-    protected SocketChannel javaChannel() {
-        return javaChannel;
     }
 
     protected Flow flow() {
@@ -105,32 +62,6 @@ final public class CoflowChannel {
     }
 
     protected long getBytesSent() {
-        return bytesWritten;
-    }
-
-    protected void setPriority(int priority) {
-        try {
-            javaChannel.setOption(StandardSocketOptions.IP_TOS, priority);
-            logger.trace("{} priority is set to {}", flow, priority);
-        } catch (IOException e) {
-            logger.warn("{} illegal priority {} ignored", flow, priority);
-        }
-    }
-
-    protected void setRateMbps(int rate) {
-        if (rate >= 0) {
-            rateLimitMbps = rate;
-            logger.trace("{} rate is set to {} Mbps", flow, rate);
-        } else {
-            logger.warn("{} illegal rate {} is ignored", flow, rate);
-        }
-    }
-
-    protected void start() {
-        canProceed = true;
-    }
-
-    protected void pause() {
-        canProceed = false;
+        return bytesWritten.get();
     }
 }

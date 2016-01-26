@@ -7,27 +7,23 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 
-public class SocketChannelTransformer implements ClassFileTransformer {
-
+public class FileChannelTransformer implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
         byte[] byteCode = classfileBuffer;
 
         switch (className) {
-            case "sun/nio/ch/SocketChannelImpl":
+            case "sun/nio/ch/FileChannelImpl":
                 try {
                     ClassPool classPool = ClassPool.getDefault();
-                    CtClass clazz = classPool.get("sun.nio.ch.SocketChannelImpl");
+                    CtClass clazz = classPool.get("sun.nio.ch.FileChannelImpl");
 
                     System.out.println("Instrumenting " + clazz.getName());
 
-                    // Add flow as a field in SocketChannelImpl
                     classPool.importPackage("coflow");
-                    CtField flow = CtField.make("volatile CoflowChannel coflowChannel;", clazz);
-                    clazz.addField(flow);
 
-                    String methodName = "write";
+                    String methodName = "transferToDirectly";
                     CtMethod methods[] = clazz.getDeclaredMethods(methodName);
                     for (CtMethod method : methods) {
 
@@ -37,7 +33,7 @@ public class SocketChannelTransformer implements ClassFileTransformer {
 
                         CtMethod newMethod = CtNewMethod.copy(method, methodName, clazz, null);
                         String body = "{" +
-                            "if (coflowChannel == null) { coflowChannel = new CoflowChannel(this); }" +
+                            "CoflowChannel coflowChannel = CoflowChannel.getChannel($3);" +
                             type + " result = " + oldMethodName + "($$);" +
                             "if (coflowChannel != null) { coflowChannel.write(result); }" +
                             "return result;" +
@@ -46,10 +42,6 @@ public class SocketChannelTransformer implements ClassFileTransformer {
                         newMethod.setBody(body);
                         clazz.addMethod(newMethod);
                     }
-
-                    // Instrument close method
-                    CtMethod method = clazz.getDeclaredMethod("kill");
-                    method.insertAfter("if (coflowChannel != null) coflowChannel.close();");
 
                     byteCode = clazz.toBytecode();
                     clazz.detach();

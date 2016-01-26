@@ -1,0 +1,47 @@
+#!/bin/bash
+
+COFLOW_VERSION=0.0.1
+
+# Figure out where it is installed
+FWDIR="$(cd `dirname $0`; pwd)"
+
+# Export this as COFLOW_HOME
+export COFLOW_HOME="$FWDIR"
+
+# Load environment variables from conf/coflow-env.sh, if it exists
+if [ -e $FWDIR/conf/coflow-env.sh ] ; then
+  . $FWDIR/conf/coflow-env.sh
+fi
+
+if [ -z "$1" ]; then
+  echo "Usage: run <coflow-class> [<args>]" >&2
+  exit 1
+fi
+
+if [ -z "$JAVA_HOME" ]; then
+  echo "JAVA_HOME is not set" >&2
+  exit 1
+fi
+JAVA="${JAVA_HOME}/bin/java"
+
+if [ -z "$COFLOW_MEM" ] ; then
+  COFLOW_MEM="512m"
+fi
+export COFLOW_MEM
+
+# Set JAVA_OPTS to be able to load native libraries and to set heap size
+JAVA_OPTS="$COFLOW_JAVA_OPTS"
+JAVA_OPTS+=" -Djava.library.path=$COFLOW_LIBRARY_PATH"
+JAVA_OPTS+=" -Xms$COFLOW_MEM -Xmx$COFLOW_MEM"
+export JAVA_OPTS
+
+CORE_DIR="$FWDIR/core"
+EXAMPLE_DIR="$FWDIR/example"
+
+# Build up classpath
+CLASSPATH="$COFLOW_CLASSPATH"
+CLASSPATH+=":$FWDIR/conf"
+CLASSPATH+=":$CORE_DIR/build/libs/coflow-$COFLOW_VERSION-all.jar"
+export CLASSPATH
+
+exec "$JAVA" -cp "$CLASSPATH" $JAVA_OPTS "$@"

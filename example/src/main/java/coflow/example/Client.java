@@ -42,7 +42,7 @@ public class Client {
                 Channel channel = f.channel();
 
                 CoflowChannel.register(channel.localAddress(),
-                    channel.remoteAddress(), "test" + z);
+                    channel.remoteAddress(), "test/" + z);
 
                 long start = System.currentTimeMillis();
 

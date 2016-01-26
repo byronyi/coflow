@@ -1,12 +1,13 @@
 package coflow
 
-import java.net.{InetAddress, InetSocketAddress, SocketAddress}
+import java.net.InetAddress
 
 import akka.actor._
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object CoflowClient {
@@ -22,14 +23,11 @@ object CoflowClient {
     private val flowToChannel = TrieMap[Flow, CoflowChannel]()
     private val flowToCoflow = TrieMap[Flow, String]()
 
-    private val actorSystem = ActorSystem("coflowClient")
-    actorSystem.actorOf(Props[ClientActor])
+    Future {
+        ActorSystem("coflowClient").actorOf(Props[ClientActor])
+    }
 
-    private[coflow] def register(source: SocketAddress, destination: SocketAddress, coflowId: String) = {
-        val src = source.asInstanceOf[InetSocketAddress]
-        val dst = destination.asInstanceOf[InetSocketAddress]
-        val flow = Flow(src.getAddress.getHostAddress, src.getPort, dst.getAddress.getHostAddress, dst.getPort)
-
+    private[coflow] def register(flow: Flow, coflowId: String) = {
         flowToCoflow(flow) = coflowId
         logger.trace(s"$flow registered with coflow id $coflowId")
     }
@@ -61,12 +59,12 @@ object CoflowClient {
 
         override def receive = {
             case Start(flow) =>
-                flowToChannel.get(flow).foreach(_.start())
+                flowToChannel.get(flow).foreach(_ => Unit)
 
             case PauseAll =>
                 // Only those registered flows may be paused
                 flowToCoflow.keys.foreach {
-                    flowToChannel.get(_).foreach(_.pause())
+                    flowToChannel.get(_).foreach(_ => Unit)
                 }
 
             case MergeAndSync =>

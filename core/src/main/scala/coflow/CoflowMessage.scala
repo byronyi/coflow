@@ -12,7 +12,3 @@ private[coflow] case class FlowPriorityQueue(flows: Array[Flow]) extends CoflowM
 
 // Client <-> Slave
 private[coflow] case class ClientCoflows(coflows: Map[String, Map[Flow, Long]]) extends CoflowMessage
-
-private[coflow] object PauseAll extends CoflowMessage
-
-private[coflow] case class Start(flow: Flow) extends CoflowMessage

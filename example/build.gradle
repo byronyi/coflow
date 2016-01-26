@@ -3,13 +3,13 @@ dependencies {
     compile project(':core')
 }
 
-task runClient(type:JavaExec, dependsOn:':core:shadowJar') {
-    main = 'coflow.example.Client'
+task runServer(type:JavaExec, dependsOn:':core:shadowJar') {
+    main = 'coflow.example.Server'
     classpath = sourceSets.main.runtimeClasspath
     jvmArgs += '-javaagent:../core/build/libs/coflow-0.0.1-all.jar'
 }
 
-task runServer(type:JavaExec) {
-    main = 'coflow.example.Server'
+task runClient(type:JavaExec) {
+    main = 'coflow.example.Client'
     classpath = sourceSets.main.runtimeClasspath
 }
