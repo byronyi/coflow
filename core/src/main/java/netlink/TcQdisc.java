@@ -5,7 +5,7 @@ import netlink.swig.capi;
 
 import java.io.IOException;
 
-public class TcQdisc implements Tc {
+public class TcQdisc {
 
     final protected SWIGTYPE_p_rtnl_qdisc ptr;
 
@@ -36,7 +36,6 @@ public class TcQdisc implements Tc {
         }
     }
 
-    @Override
     public TcObject asTcObject() {
         return new TcObject(capi.qdisc2tc(ptr));
     }

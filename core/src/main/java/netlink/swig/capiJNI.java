@@ -9,75 +9,145 @@
 package netlink.swig;
 
 public class capiJNI {
-  public final static native long if_nametoindex(String jarg1);
-  public final static native String nl_geterror(int jarg1);
-  public final static native int nl_connect(long jarg1, int jarg2);
-  public final static native void nl_close(long jarg1);
-  public final static native long nl_socket_alloc();
-  public final static native void nl_socket_free(long jarg1);
-  public final static native long tc_str2handle(String jarg1);
-  public final static native void rtnl_tc_set_ifindex(long jarg1, int jarg2);
-  public final static native int rtnl_tc_get_ifindex(long jarg1);
-  public final static native void rtnl_tc_set_mtu(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_mtu(long jarg1);
-  public final static native void rtnl_tc_set_mpu(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_mpu(long jarg1);
-  public final static native void rtnl_tc_set_overhead(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_overhead(long jarg1);
-  public final static native void rtnl_tc_set_linktype(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_linktype(long jarg1);
-  public final static native void rtnl_tc_set_handle(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_handle(long jarg1);
-  public final static native void rtnl_tc_set_parent(long jarg1, long jarg2);
-  public final static native long rtnl_tc_get_parent(long jarg1);
-  public final static native int rtnl_tc_set_kind(long jarg1, String jarg2);
-  public final static native String rtnl_tc_get_kind(long jarg1);
-  public final static native long qdisc2tc(long jarg1);
-  public final static native long class2tc(long jarg1);
-  public final static native long cls2tc(long jarg1);
-  public final static native long rtnl_qdisc_alloc();
-  public final static native void rtnl_qdisc_put(long jarg1);
-  public final static native int rtnl_qdisc_add(long jarg1, long jarg2, int jarg3);
-  public final static native int rtnl_qdisc_update(long jarg1, long jarg2, long jarg3, int jarg4);
-  public final static native int rtnl_qdisc_delete(long jarg1, long jarg2);
-  public final static native long rtnl_class_alloc();
-  public final static native void rtnl_class_put(long jarg1);
-  public final static native int rtnl_class_add(long jarg1, long jarg2, int jarg3);
-  public final static native int rtnl_class_delete(long jarg1, long jarg2);
-  public final static native long rtnl_cls_alloc();
-  public final static native void rtnl_cls_put(long jarg1);
-  public final static native int rtnl_cls_add(long jarg1, long jarg2, int jarg3);
-  public final static native int rtnl_cls_delete(long jarg1, long jarg2, int jarg3);
-  public final static native void rtnl_cls_set_prio(long jarg1, int jarg2);
-  public final static native int rtnl_cls_get_prio(long jarg1);
-  public final static native void rtnl_cls_set_protocol(long jarg1, int jarg2);
-  public final static native int rtnl_cls_get_protocol(long jarg1);
-  public final static native void rtnl_u32_set_handle(long jarg1, int jarg2, int jarg3, int jarg4);
-  public final static native int rtnl_u32_set_classid(long jarg1, long jarg2);
-  public final static native int rtnl_u32_set_divisor(long jarg1, long jarg2);
-  public final static native int rtnl_u32_set_link(long jarg1, long jarg2);
-  public final static native int rtnl_u32_set_hashtable(long jarg1, long jarg2);
-  public final static native int rtnl_u32_set_hashmask(long jarg1, long jarg2, long jarg3);
-  public final static native int rtnl_u32_set_cls_terminal(long jarg1);
-  public final static native int rtnl_u32_set_flags(long jarg1, int jarg2);
-  public final static native int rtnl_u32_add_key_uint8(long jarg1, short jarg2, short jarg3, int jarg4, int jarg5);
-  public final static native int rtnl_u32_add_key_uint16(long jarg1, int jarg2, int jarg3, int jarg4, int jarg5);
-  public final static native int rtnl_u32_add_key_uint32(long jarg1, long jarg2, long jarg3, int jarg4, int jarg5);
-  public final static native long rtnl_htb_get_rate2quantum(long jarg1);
-  public final static native int rtnl_htb_set_rate2quantum(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_defcls(long jarg1);
-  public final static native int rtnl_htb_set_defcls(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_prio(long jarg1);
-  public final static native int rtnl_htb_set_prio(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_rate(long jarg1);
-  public final static native int rtnl_htb_set_rate(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_ceil(long jarg1);
-  public final static native int rtnl_htb_set_ceil(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_rbuffer(long jarg1);
-  public final static native int rtnl_htb_set_rbuffer(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_cbuffer(long jarg1);
-  public final static native int rtnl_htb_set_cbuffer(long jarg1, long jarg2);
-  public final static native long rtnl_htb_get_quantum(long jarg1);
-  public final static native int rtnl_htb_set_quantum(long jarg1, long jarg2);
-  public final static native int rtnl_htb_get_level(long jarg1);
+    public final static native long if_nametoindex(String jarg1);
+
+    public final static native String nl_geterror(int jarg1);
+
+    public final static native int nl_connect(long jarg1, int jarg2);
+
+    public final static native void nl_close(long jarg1);
+
+    public final static native long nl_socket_alloc();
+
+    public final static native void nl_socket_free(long jarg1);
+
+    public final static native long tc_str2handle(String jarg1);
+
+    public final static native void rtnl_tc_set_ifindex(long jarg1, int jarg2);
+
+    public final static native int rtnl_tc_get_ifindex(long jarg1);
+
+    public final static native void rtnl_tc_set_mtu(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_mtu(long jarg1);
+
+    public final static native void rtnl_tc_set_mpu(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_mpu(long jarg1);
+
+    public final static native void rtnl_tc_set_overhead(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_overhead(long jarg1);
+
+    public final static native void rtnl_tc_set_linktype(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_linktype(long jarg1);
+
+    public final static native void rtnl_tc_set_handle(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_handle(long jarg1);
+
+    public final static native void rtnl_tc_set_parent(long jarg1, long jarg2);
+
+    public final static native long rtnl_tc_get_parent(long jarg1);
+
+    public final static native int rtnl_tc_set_kind(long jarg1, String jarg2);
+
+    public final static native String rtnl_tc_get_kind(long jarg1);
+
+    public final static native long qdisc2tc(long jarg1);
+
+    public final static native long class2tc(long jarg1);
+
+    public final static native long cls2tc(long jarg1);
+
+    public final static native long rtnl_qdisc_alloc();
+
+    public final static native void rtnl_qdisc_put(long jarg1);
+
+    public final static native int rtnl_qdisc_add(long jarg1, long jarg2, int jarg3);
+
+    public final static native int rtnl_qdisc_update(long jarg1, long jarg2, long jarg3, int jarg4);
+
+    public final static native int rtnl_qdisc_delete(long jarg1, long jarg2);
+
+    public final static native long rtnl_class_alloc();
+
+    public final static native void rtnl_class_put(long jarg1);
+
+    public final static native int rtnl_class_add(long jarg1, long jarg2, int jarg3);
+
+    public final static native int rtnl_class_delete(long jarg1, long jarg2);
+
+    public final static native long rtnl_cls_alloc();
+
+    public final static native void rtnl_cls_put(long jarg1);
+
+    public final static native int rtnl_cls_add(long jarg1, long jarg2, int jarg3);
+
+    public final static native int rtnl_cls_delete(long jarg1, long jarg2, int jarg3);
+
+    public final static native void rtnl_cls_set_prio(long jarg1, int jarg2);
+
+    public final static native int rtnl_cls_get_prio(long jarg1);
+
+    public final static native void rtnl_cls_set_protocol(long jarg1, int jarg2);
+
+    public final static native int rtnl_cls_get_protocol(long jarg1);
+
+    public final static native void rtnl_u32_set_handle(long jarg1, int jarg2, int jarg3, int jarg4);
+
+    public final static native int rtnl_u32_set_classid(long jarg1, long jarg2);
+
+    public final static native int rtnl_u32_set_divisor(long jarg1, long jarg2);
+
+    public final static native int rtnl_u32_set_link(long jarg1, long jarg2);
+
+    public final static native int rtnl_u32_set_hashtable(long jarg1, long jarg2);
+
+    public final static native int rtnl_u32_set_hashmask(long jarg1, long jarg2, long jarg3);
+
+    public final static native int rtnl_u32_set_cls_terminal(long jarg1);
+
+    public final static native int rtnl_u32_set_flags(long jarg1, int jarg2);
+
+    public final static native int rtnl_u32_add_key_uint8(long jarg1, short jarg2, short jarg3, int jarg4, int jarg5);
+
+    public final static native int rtnl_u32_add_key_uint16(long jarg1, int jarg2, int jarg3, int jarg4, int jarg5);
+
+    public final static native int rtnl_u32_add_key_uint32(long jarg1, long jarg2, long jarg3, int jarg4, int jarg5);
+
+    public final static native long rtnl_htb_get_rate2quantum(long jarg1);
+
+    public final static native int rtnl_htb_set_rate2quantum(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_defcls(long jarg1);
+
+    public final static native int rtnl_htb_set_defcls(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_prio(long jarg1);
+
+    public final static native int rtnl_htb_set_prio(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_rate(long jarg1);
+
+    public final static native int rtnl_htb_set_rate(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_ceil(long jarg1);
+
+    public final static native int rtnl_htb_set_ceil(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_rbuffer(long jarg1);
+
+    public final static native int rtnl_htb_set_rbuffer(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_cbuffer(long jarg1);
+
+    public final static native int rtnl_htb_set_cbuffer(long jarg1, long jarg2);
+
+    public final static native long rtnl_htb_get_quantum(long jarg1);
+
+    public final static native int rtnl_htb_set_quantum(long jarg1, long jarg2);
+
+    public final static native int rtnl_htb_get_level(long jarg1);
 }

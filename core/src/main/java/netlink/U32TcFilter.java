@@ -49,7 +49,7 @@ public class U32TcFilter extends TcFilter {
         int ip = ByteBuffer.wrap(src.getAddress().getAddress()).getInt();
         int port = src.getPort();
         addKeyUint32(ip, 0xffffffff, 12, 0);
-        addKeyUint16(port, 0xffff, 0, 1);
+        addKeyUint16(port, 0xffff, 20, 0);
         return this;
     }
 
@@ -57,7 +57,15 @@ public class U32TcFilter extends TcFilter {
         int ip = ByteBuffer.wrap(dest.getAddress().getAddress()).getInt();
         int port = dest.getPort();
         addKeyUint32(ip, 0xffffffff, 16, 0);
-        addKeyUint16(port, 0xffff, 2, 1);
+        addKeyUint16(port, 0xffff, 22, 0);
+        return this;
+    }
+
+    public U32TcFilter setTerminal() throws IOException {
+        int ret = capi.rtnl_u32_set_cls_terminal(ptr);
+        if (ret < 0) {
+            throw new IOException(capi.nl_geterror(ret));
+        }
         return this;
     }
 }

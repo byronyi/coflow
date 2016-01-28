@@ -27,7 +27,7 @@ public class HTBTcQdisc extends TcQdisc {
         return capi.rtnl_htb_get_defcls(ptr);
     }
 
-    public HTBTcQdisc setDefaultClass(int defaultClass) throws IOException {
+    public HTBTcQdisc setDefaultClass(long defaultClass) throws IOException {
         int ret = capi.rtnl_htb_set_defcls(ptr, defaultClass);
         if (ret < 0) {
             throw new IOException(capi.nl_geterror(ret));

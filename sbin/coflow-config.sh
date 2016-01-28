@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # included in all the coflow scripts with source command
 # should not be executable directly
 # also should not be passed any arguments, since we need original $*

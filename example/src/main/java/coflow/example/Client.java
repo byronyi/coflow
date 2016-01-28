@@ -36,13 +36,12 @@ public class Client {
 
             byte[] junk = new byte[1024 * 1024];
 
-            for (int z = 0; z < 10; z++) {
+            for (int z = 0; z < 1; z++) {
 
                 ChannelFuture f = b.connect(host, port).sync();
                 Channel channel = f.channel();
 
-                CoflowChannel.register(channel.localAddress(),
-                    channel.remoteAddress(), "test/" + z);
+                CoflowChannel.register(channel.localAddress(), channel.remoteAddress(), "test/" + z);
 
                 long start = System.currentTimeMillis();
 

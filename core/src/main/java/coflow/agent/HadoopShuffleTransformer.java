@@ -29,7 +29,7 @@ public class HadoopShuffleTransformer implements ClassFileTransformer {
                             "ctx.getChannel().getLocalAddress()," +
                             "ctx.getChannel().getRemoteAddress()," +
                             "$1" +
-                        ");");
+                            ");");
                     }
 
                     byteCode = clazz.toBytecode();

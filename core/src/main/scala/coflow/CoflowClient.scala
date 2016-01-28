@@ -9,44 +9,56 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object CoflowClient {
 
-    val REMOTE_SYNC_PERIOD_MILLIS = 1000
+    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).getOrElse("1000").toInt
+
+    val MIN_BYTES_SENT_REPORTING_THRESHOLD = 10 * 1024 * 1024
 
     val host = InetAddress.getLocalHost.getHostAddress
-    val slavePort = CoflowSlave.port
+    val slavePort = 1607
     val slaveUrl = s"akka.tcp://coflowSlave@$host:$slavePort/user/slave"
-
-    private val logger = LoggerFactory.getLogger(CoflowClient.getClass)
-
-    private val flowToChannel = TrieMap[Flow, CoflowChannel]()
-    private val flowToCoflow = TrieMap[Flow, String]()
-
-    Future {
+    val client = Future {
         ActorSystem("coflowClient").actorOf(Props[ClientActor])
     }
+    private val logger = LoggerFactory.getLogger(CoflowClient.getClass)
+    private val flowToChannel = TrieMap[Flow, CoflowChannel]()
+    private val flowToCoflow = TrieMap[Flow, String]()
 
     private[coflow] def register(flow: Flow, coflowId: String) = {
         flowToCoflow(flow) = coflowId
         logger.trace(s"$flow registered with coflow id $coflowId")
+        client.andThen {
+            case Success(actor) => actor ! FlowRegister(flow)
+            case Failure(e) => logger.warn("cannot send flow started notification to client actor", e)
+        }
+    }
+
+    private[coflow] def getChannel(flow: Flow): CoflowChannel = {
+        flowToChannel.get(flow).orNull
     }
 
     private[coflow] def open(channel: CoflowChannel) = {
-        val flow = channel.flow()
-        if (flow.srcPort == CoflowSlave.port || flow.dstPort == CoflowSlave.port ||
-            flow.srcPort == CoflowMaster.port || flow.dstPort == CoflowMaster.port) {
-        } else {
-            flowToChannel(flow) = channel
-        }
+
+        val flow = channel.flow
         logger.trace(s"$flow started writing")
+
+        flowToChannel(flow) = channel
     }
 
     private[coflow] def close(channel: CoflowChannel) = {
+
         val flow = channel.flow
+        logger.trace(s"$flow finishes with size ${channel.getBytesSent} bytes")
+
         flowToChannel -= flow
         flowToCoflow -= flow
-        logger.trace(s"$flow finishes with size ${channel.getBytesSent} bytes")
+        client.andThen {
+            case Success(actor) => actor ! FlowEnd(flow)
+            case Failure(e) => logger.warn("cannot send flow ended notification to client actor", e)
+        }
     }
 
     private[coflow] class ClientActor extends Actor {
@@ -58,24 +70,29 @@ object CoflowClient {
         }
 
         override def receive = {
-            case Start(flow) =>
-                flowToChannel.get(flow).foreach(_ => Unit)
 
-            case PauseAll =>
-                // Only those registered flows may be paused
-                flowToCoflow.keys.foreach {
-                    flowToChannel.get(_).foreach(_ => Unit)
+            case FlowRegister(flow) =>
+                slave.andThen {
+                    case Success(actor) => actor ! FlowRegister(flow)
+                    case _ =>
+                }
+
+            case FlowEnd(flow) =>
+                slave.andThen {
+                    case Success(actor) => actor ! FlowEnd(flow)
+                    case _ =>
                 }
 
             case MergeAndSync =>
-                slave.foreach(actor => {
-                    val coflows = flowToCoflow.groupBy(_._2).mapValues {
-                        _.keys.map { flow =>
-                            (flow, flowToChannel.get(flow).map(_.getBytesSent).sum)
-                        }.toMap
-                    }.map(identity) // Workaround for https://issues.scala-lang.org/browse/SI-7005
-                    actor ! ClientCoflows(coflows)
-                })
+                for (actor <- slave) {
+                    val clientCoflows = flowToCoflow.flatMap({
+                        case (flow, coflowId) =>
+                            val channel = flowToChannel.get(flow)
+                            val bytesSent = channel.map(_.getBytesSent).filter(_ > MIN_BYTES_SENT_REPORTING_THRESHOLD)
+                            bytesSent.map(bytesWritten => Coflow(flow, coflowId, bytesWritten))
+                    })
+                    actor ! ClientCoflows(clientCoflows.toArray)
+                }
         }
     }
 

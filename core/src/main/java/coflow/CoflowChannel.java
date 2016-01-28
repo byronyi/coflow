@@ -4,16 +4,26 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-final public class CoflowChannel {
+public class CoflowChannel {
 
     final static private ConcurrentMap<Object, String> keyToCoflowId = new ConcurrentHashMap<>();
-
-    final private Flow flow;
     final protected AtomicLong bytesWritten = new AtomicLong(0L);
+    final private Flow flow;
+
+    public CoflowChannel(SocketChannel channel) throws IOException {
+
+        InetSocketAddress src = (InetSocketAddress) channel.getLocalAddress();
+        InetSocketAddress dst = (InetSocketAddress) channel.getRemoteAddress();
+
+        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
+
+        CoflowClient$.MODULE$.open(this);
+    }
 
     static public void register(SocketAddress source, SocketAddress destination, String coflowId) {
         InetSocketAddress src = (InetSocketAddress) source;
@@ -35,14 +45,20 @@ final public class CoflowChannel {
         }
     }
 
-    public CoflowChannel(SocketChannel channel) throws IOException {
+    static public CoflowChannel getChannel(WritableByteChannel channel) throws IOException {
 
-        InetSocketAddress src = (InetSocketAddress) channel.getLocalAddress();
-        InetSocketAddress dst = (InetSocketAddress) channel.getRemoteAddress();
+        if (channel instanceof SocketChannel) {
 
-        flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
+            SocketChannel socketChannel = (SocketChannel) channel;
+            InetSocketAddress src = (InetSocketAddress) socketChannel.getLocalAddress();
+            InetSocketAddress dst = (InetSocketAddress) socketChannel.getRemoteAddress();
 
-        CoflowClient$.MODULE$.open(this);
+            Flow flow = new Flow(src.getAddress().getHostAddress(), src.getPort(), dst.getAddress().getHostAddress(), dst.getPort());
+            return CoflowClient$.MODULE$.getChannel(flow);
+
+        } else {
+            return null;
+        }
     }
 
     public void write(int size) {

@@ -9,26 +9,31 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 private[coflow] object CoflowMaster {
 
-    val REMOTE_SYNC_PERIOD_MILLIS = 1000
+    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).getOrElse("1000").toInt
 
-    val host = InetAddress.getLocalHost.getHostAddress
+    val host = Option(System.getenv("COFLOW_MASTER_IP")).getOrElse(InetAddress.getLocalHost.getHostAddress)
     val port = 1606
 
     private val logger = LoggerFactory.getLogger(CoflowMaster.getClass)
 
-    private val addressToSlave = TrieMap[Address, ActorRef]()
+    private val ipToBandwidth = TrieMap[String, Long]()
     private val ipToSlave = TrieMap[String, ActorRef]()
-    private val slaveToCoflows = TrieMap[ActorRef, SlaveCoflows]()
+    private val ipToCoflows = TrieMap[String, SlaveCoflows]()
 
     def main(args: Array[String]) = {
 
-        val conf = ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port").withFallback(ConfigFactory.load())
+        val conf = ConfigFactory.parseString(
+            s"""
+            akka.remote.netty.tcp {
+                hostname = "$host",
+                port = $port
+            }
+            """.stripMargin).withFallback(ConfigFactory.load())
 
         val actorSystem = ActorSystem("coflowMaster", conf)
         val master = actorSystem.actorOf(Props[MasterActor], "master")
@@ -37,68 +42,56 @@ private[coflow] object CoflowMaster {
         actorSystem.awaitTermination()
     }
 
-    def clustering(flows: Array[Flow]): Map[String, Array[Flow]] = {
+    def clustering(flows: Array[Flow]): Array[String] = {
 
-        val epsilon = 100L
+        val epsilon = 5000L
 
-        val sortedIndices = flows.indices.sortBy(flows(_).startTime)
+        val sortedFlowWithIndex = flows.zipWithIndex.sortBy(_._1.startTime)
         var lastStartTime = 0L
         var currentCluster = -1
 
-        val clusterIds = sortedIndices.map(i => {
-            if (lastStartTime + epsilon < flows(i).startTime) {
-                currentCluster += 1
-            }
-            lastStartTime = flows(i).startTime
-            currentCluster.toString
+        val clusterIds = sortedFlowWithIndex.map({
+            case (flow, index) =>
+                if (lastStartTime + epsilon < flow.startTime) {
+                    currentCluster += 1
+                }
+                lastStartTime = flow.startTime
+                currentCluster.toString
         })
 
-        // Perform an group by on indices, with key as cluster id
-        clusterIds.zip(sortedIndices).groupBy(_._1).mapValues {
-            indices => indices.map(idx => flows(idx._2)).toArray
-        }
-
+        clusterIds.toArray
     }
 
-    def getSchedule(slaves: Array[String],
-                    coflows: Map[String, Map[Flow, Long]]): Map[String, Array[Flow]] = {
+    def getSchedule(flowSizes: Array[Long], coflowIds: Array[String]): Array[Int] = {
 
-        // TODO: sorted on specific keys to customize the ordering of coflow
-        val sortedCoflow = coflows.mapValues(_.values.sum).toArray.sortBy(_._2).map(_._1)
-
-        val slaveFlows = slaves.map(_ -> ArrayBuffer[Flow]()).toMap
-
-        for (coflowId <- sortedCoflow) {
-            for (flow <- coflows(coflowId).toArray.sortBy(_._2).map(_._1)) {
-                slaveFlows.get(flow.srcIp).foreach(_ += flow)
-            }
-        }
-        slaveFlows.map({ case (slave, flows) => (slave, flows.toArray) })
+        val threshold = (0 to 9).map(Math.pow(10, _).asInstanceOf[Long] * 10 * 1024 * 1024)
+        val coflowSizes = coflowIds.zip(flowSizes).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val coflowPriority = coflowSizes.mapValues(size => threshold.zipWithIndex.find(_._1 < size).map(_._2).getOrElse(10))
+        coflowIds.map(coflowPriority(_))
     }
 
-    def getScore(coflows: Map[String, Map[Flow, Long]],
-                 cluster: Map[String, Array[Flow]]): Map[String, Map[String, Double]] = {
+    def getRate(flows: Array[Flow], priorities: Array[Int]): Array[Long] = {
 
-        val scores = coflows.map({ case (coflowId, flowSizes) =>
-            val trueCluster = flowSizes.keys.toSet
-            var precision = 0.0
-            var recall = 0.0
-            cluster.values.foreach(flows => {
-                val predictedCluster = flows.toSet
-                val intersection = trueCluster & predictedCluster
-                val p = intersection.size.toDouble / predictedCluster.size
-                val r = intersection.size.toDouble / trueCluster.size
-                if (precision < p) {
-                    precision = p
+        val priorityQueue = priorities.zip(flows).groupBy(_._1).toArray.sortBy(_._1).map(_._2.map(_._2))
+
+        val egressFree = mutable.Map[String, Long]() ++ ipToBandwidth
+        val ingressFree = mutable.Map[String, Long]() ++ ipToBandwidth
+
+        priorityQueue.flatMap(queue => {
+            val egressNumFlows = queue.groupBy(_.srcIp).mapValues(_.length)
+            val ingressNumFlows = queue.groupBy(_.dstIp).mapValues(_.length)
+            queue.map(flow => {
+                val rate = math.min(egressFree.getOrElse(flow.srcIp, 0L) / egressNumFlows(flow.srcIp),
+                    ingressFree.getOrElse(flow.dstIp, 0L) / ingressNumFlows(flow.dstIp))
+                if (rate > 0) {
+                    egressFree(flow.srcIp) -= rate
+                    ingressFree(flow.dstIp) -= rate
                 }
-                if (recall < r) {
-                    recall = r
-                }
+                rate
             })
-            (coflowId, Map("precision" -> precision, "recall" -> recall))
         })
-        scores
     }
+
 
     private[coflow] class MasterActor extends Actor {
 
@@ -107,65 +100,68 @@ private[coflow] object CoflowMaster {
         }
 
         override def receive = {
-            case SlaveCoflows(ip, coflows) =>
 
-                ipToSlave(ip) = sender
-                slaveToCoflows(sender) = SlaveCoflows(ip, coflows)
-                addressToSlave(sender.path.address) = sender
+            case SlaveRegister(bandwidth) =>
+                logger.info(s"slave from ${sender.path.address} registered with $bandwidth byte/s bandwidth")
+                for (ip <- sender.path.address.host) {
+                    ipToBandwidth(ip) = bandwidth
+                    ipToSlave(ip) = sender
+                }
 
-            case d: DisassociatedEvent =>
-
-                addressToSlave.get(d.remoteAddress).foreach(disconnect)
-                addressToSlave -= d.remoteAddress
+            case SlaveCoflows(coflows) =>
+                logger.trace(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
+                for (ip <- sender.path.address.host) {
+                    ipToCoflows(ip) = SlaveCoflows(coflows)
+                }
 
             case MergeAndSync =>
 
-                val phase1 = System.currentTimeMillis
+                if (ipToCoflows.nonEmpty) {
 
-                val coflows = slaveToCoflows.values.flatMap(_.coflows)
-                    .groupBy(_._1).mapValues {
-                    _.map(_._2).fold(mutable.Map[Flow, Long]())(_ ++ _).toMap
-                }
-                val flowSize = coflows.values.fold(mutable.Map[Flow, Long]())(_ ++ _)
+                    val start = System.currentTimeMillis
 
-                val cluster = clustering(flowSize.keys.toArray)
+                    val coflows = ipToCoflows.values.flatMap(_.coflows)
 
-                val phase2 = System.currentTimeMillis
+                    /*
+                    val clusterIds = clustering(coflows.map(_.flow).toArray)
+                    */
 
-                val scores = getScore(coflows, cluster)
-                if (scores.nonEmpty) {
-                    logger.trace(s"Scores: $scores")
-                }
+                    val phase1 = System.currentTimeMillis
 
-                val phase3 = System.currentTimeMillis
+                    val priorities = getSchedule(coflows.map(_.bytesWritten).toArray, coflows.map(_.coflowId).toArray)
 
-                val flowClusters = cluster.mapValues {
-                    _.map(f => (f, flowSize(f))).toMap
-                }
-                val schedule = getSchedule(ipToSlave.keys.toArray, flowClusters)
+                    val phase2 = System.currentTimeMillis
 
-                schedule.foreach {
-                    case (ip, flows) => ipToSlave.get(ip).foreach {
-                        slave => {
-                            slave ! FlowPriorityQueue(flows)
+                    val rates = getRate(coflows.map(_.flow).toArray, priorities)
+
+                    val phase3 = System.currentTimeMillis
+
+                    for ((srcIp, flowRates) <- coflows.map(_.flow).zip(rates).groupBy(_._1.srcIp)) {
+                        for (actor <- ipToSlave.get(srcIp)) {
+                            if (flowRates.nonEmpty) {
+                                actor ! FlowRateLimit(flowRates.toMap)
+                            }
                         }
                     }
+
+                    val phase4 = System.currentTimeMillis
+
+                    logger.trace(s"For ${coflows.size} flows, " +
+                        s"clustering: ${phase1 - start} ms, " +
+                        s"schedule: ${phase2 - phase1} ms, " +
+                        s"calculate rate: ${phase3 - phase2} ms, " +
+                        s"send to slaves: ${phase4 - phase3} ms")
                 }
 
-                val phase4 = System.currentTimeMillis
+            case DisassociatedEvent(localAddress, remoteAddress, inbound) =>
 
-                if (flowSize.nonEmpty) {
-                    logger.trace(s" ${flowSize.size} flows, clustering: ${phase2 - phase1} ms, " +
-                        s"scoring: ${phase3 - phase2} ms, schedule: ${phase4 - phase3} ms")
+                for (ip <- remoteAddress.host) {
+                    ipToBandwidth -= ip
+                    ipToCoflows -= ip
+                    ipToSlave -= ip
                 }
-        }
-    }
 
-    def disconnect(actor: ActorRef) = {
-        slaveToCoflows.get(actor).foreach {
-            ipToSlave -= _.host
         }
-        slaveToCoflows -= actor
     }
 
 }

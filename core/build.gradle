@@ -4,8 +4,24 @@ plugins {
 
 apply plugin: 'scala'
 apply plugin: 'maven-publish'
-
 apply plugin: 'com.github.johnrengelman.shadow'
+
+def javaSrcDir = new File("${projectDir}/src/main/java/netlink/swig")
+def swigFile = new File("${projectDir}/src/main/jni/libnl-3/capi.i")
+
+def cSrcFile = new File("${projectDir}/src/main/jni/libnl-3/capi_wrap.c")
+def jniLib = new File("${projectDir}/build/libs/libnl4j.so")
+
+task runSwig(type: Exec) {
+    commandLine 'swig'
+    javaSrcDir.mkdirs()
+    args '-java', '-package', 'netlink.swig', '-outdir', javaSrcDir.absolutePath, swigFile.absolutePath
+}
+
+task compileJNI(type: Exec) {
+    commandLine 'cc'
+    args '-I', '/usr/lib/jvm/default-java/include', '-I', '/usr/lib/jvm/default-java/include/linux', '-I', '/usr/include/libnl3', '-lnl-route-3', '-lnl-3', '-shared', '-fPIC', '-o', jniLib.absolutePath, cSrcFile.absolutePath
+}
 
 sourceSets {
     main {
@@ -27,17 +43,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-def javaSrcDir = new File("${projectDir}/src/main/java/netlink/swig")
-def swigFile = new File("${projectDir}/src/main/jni/libnl-3/capi.i")
-
-task runSwig(type:Exec) {
-    commandLine 'swig'
-    javaSrcDir.mkdirs()
-    args '-java', '-package', 'netlink.swig', '-outdir', javaSrcDir.absolutePath, swigFile.absolutePath
-}
-
 jar {
-  baseName = 'coflow'
+    baseName = 'coflow'
 }
 
 shadowJar {

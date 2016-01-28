@@ -5,7 +5,7 @@ import netlink.swig.capi;
 
 import java.io.IOException;
 
-public class TcFilter implements Tc {
+public class TcFilter {
 
     final protected SWIGTYPE_p_rtnl_cls ptr;
 
@@ -41,7 +41,6 @@ public class TcFilter implements Tc {
         }
     }
 
-    @Override
     public TcObject asTcObject() {
         return new TcObject(capi.cls2tc(ptr));
     }

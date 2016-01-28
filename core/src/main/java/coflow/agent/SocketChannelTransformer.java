@@ -41,7 +41,7 @@ public class SocketChannelTransformer implements ClassFileTransformer {
                             type + " result = " + oldMethodName + "($$);" +
                             "if (coflowChannel != null) { coflowChannel.write(result); }" +
                             "return result;" +
-                        "}";
+                            "}";
 
                         newMethod.setBody(body);
                         clazz.addMethod(newMethod);
