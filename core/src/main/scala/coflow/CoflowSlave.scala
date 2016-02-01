@@ -104,7 +104,9 @@ private[coflow] object CoflowSlave {
                 flowToEnforcer -= flow
 
             case ClientCoflows(coflows) =>
-                logger.trace(s"received client coflows with ${coflows.length} flows")
+                if (coflows.nonEmpty) {
+                    logger.trace(s"received client coflows with ${coflows.length} flows")
+                }
                 val address = sender.path.address
                 addressToCoflows(address) = ClientCoflows(coflows)
                 addressToClient(address) = sender

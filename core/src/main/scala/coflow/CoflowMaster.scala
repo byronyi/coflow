@@ -109,18 +109,20 @@ private[coflow] object CoflowMaster {
                 }
 
             case SlaveCoflows(coflows) =>
-                logger.trace(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
+                if (coflows.nonEmpty) {
+                    logger.trace(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
+                }
                 for (ip <- sender.path.address.host) {
                     ipToCoflows(ip) = SlaveCoflows(coflows)
                 }
 
             case MergeAndSync =>
 
-                if (ipToCoflows.nonEmpty) {
+                val coflows = ipToCoflows.values.flatMap(_.coflows)
+
+                if (coflows.nonEmpty) {
 
                     val start = System.currentTimeMillis
-
-                    val coflows = ipToCoflows.values.flatMap(_.coflows)
 
                     /*
                     val clusterIds = clustering(coflows.map(_.flow).toArray)
