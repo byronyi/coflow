@@ -44,7 +44,7 @@ public class Server {
 
             ChannelFuture f = b.bind(port).sync();
 
-            System.out.println("Listening to tcp://0.0.0.0:8080");
+            System.out.println("Listening to tcp://0.0.0.0:" + port);
             f.channel().closeFuture().sync();
         } finally {
             workerGroup.shutdownGracefully();
