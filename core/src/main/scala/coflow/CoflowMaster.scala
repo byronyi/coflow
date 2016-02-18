@@ -42,26 +42,6 @@ private[coflow] object CoflowMaster {
         actorSystem.awaitTermination()
     }
 
-    def clustering(flows: Array[Flow]): Array[String] = {
-
-        val epsilon = 5000L
-
-        val sortedFlowWithIndex = flows.zipWithIndex.sortBy(_._1.startTime)
-        var lastStartTime = 0L
-        var currentCluster = -1
-
-        val clusterIds = sortedFlowWithIndex.map({
-            case (flow, index) =>
-                if (lastStartTime + epsilon < flow.startTime) {
-                    currentCluster += 1
-                }
-                lastStartTime = flow.startTime
-                currentCluster.toString
-        })
-
-        clusterIds.toArray
-    }
-
     def getSchedule(flowSizes: Array[Long], coflowIds: Array[String]): Array[Int] = {
 
         val threshold = (0 to 9).map(Math.pow(10, _).asInstanceOf[Long] * 10 * 1024 * 1024)
@@ -124,19 +104,13 @@ private[coflow] object CoflowMaster {
 
                     val start = System.currentTimeMillis
 
-                    /*
-                    val clusterIds = clustering(coflows.map(_.flow).toArray)
-                    */
+                    val priorities = getSchedule(coflows.map(_.bytesWritten).toArray, coflows.map(_.coflowId).toArray)
 
                     val phase1 = System.currentTimeMillis
 
-                    val priorities = getSchedule(coflows.map(_.bytesWritten).toArray, coflows.map(_.coflowId).toArray)
-
-                    val phase2 = System.currentTimeMillis
-
                     val rates = getRate(coflows.map(_.flow).toArray, priorities)
 
-                    val phase3 = System.currentTimeMillis
+                    val phase2 = System.currentTimeMillis
 
                     for ((srcIp, flowRates) <- coflows.map(_.flow).zip(rates).groupBy(_._1.srcIp)) {
                         for (actor <- ipToSlave.get(srcIp)) {
@@ -146,13 +120,12 @@ private[coflow] object CoflowMaster {
                         }
                     }
 
-                    val phase4 = System.currentTimeMillis
+                    val phase3 = System.currentTimeMillis
 
                     logger.debug(s"For ${coflows.size} flows, " +
-                        s"clustering: ${phase1 - start} ms, " +
-                        s"schedule: ${phase2 - phase1} ms, " +
-                        s"calculate rate: ${phase3 - phase2} ms, " +
-                        s"send to slaves: ${phase4 - phase3} ms")
+                        s"schedule: ${phase1 - start} ms, " +
+                        s"calculate rate: ${phase2 - phase1} ms, " +
+                        s"send to slaves: ${phase3 - phase2} ms")
                 }
 
             case DisassociatedEvent(localAddress, remoteAddress, inbound) =>

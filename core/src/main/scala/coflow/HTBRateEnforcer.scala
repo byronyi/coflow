@@ -10,6 +10,8 @@ import scala.util.Try
 
 private[coflow] class HTBRateEnforcer(flow: Flow, tcIfIndex: Int, tcParentClassId: Int, tcFlowId: Int, tcCeilRate: Long) {
 
+    private val MIN_HTB_RATE_LIMIT_BYTES = 1500
+
     private val nlSocket = new NetlinkSocket
     private val tcFilter = new U32TcFilter
     private val tcClass = new HTBTcClass
@@ -30,7 +32,7 @@ private[coflow] class HTBRateEnforcer(flow: Flow, tcIfIndex: Int, tcParentClassI
         nlSocket.connect()
         Try {
             tcFilter.add(nlSocket, 0x400)
-            logger.trace(s"added tc_filter for $flow")
+            logger.debug(s"added tc_filter for $flow")
         } recover {
             case e: IOException => logger.warn("cannot add tc_filter", e)
         }
@@ -38,25 +40,25 @@ private[coflow] class HTBRateEnforcer(flow: Flow, tcIfIndex: Int, tcParentClassI
     }
 
     def setRate(rate: Long) = {
-        tcClass.setRate(rate)
+        tcClass.setRate({ if (rate < MIN_HTB_RATE_LIMIT_BYTES) MIN_HTB_RATE_LIMIT_BYTES else rate })
         Try {
             tcClass.add(nlSocket, 0x400)
-            logger.trace(s"changed $flow rate limit to $rate byte/s")
+            logger.debug(s"changed $flow rate limit to $rate byte/s")
         } recover {
-            case e: IOException => logger.warn("cannot modify tc_class during setRate", e)
+            case e: IOException => logger.warn(s"cannot modify tc_class during setRate($rate)", e)
         }
     }
 
     def stop() = {
         Try {
             tcFilter.delete(nlSocket, 0)
-            logger.trace(s"deleted tc_filter for $flow")
+            logger.debug(s"deleted tc_filter for $flow")
         } recover {
             case e: IOException => logger.warn("cannot delete tc_filter", e)
         }
         try {
             tcClass.delete(nlSocket)
-            logger.trace(s"deleted tc_class for $flow")
+            logger.debug(s"deleted tc_class for $flow")
         } catch {
             case e: IOException => logger.warn("cannot delete tc_class", e)
         }
