@@ -110,7 +110,7 @@ private[coflow] object CoflowMaster {
 
             case SlaveCoflows(coflows) =>
                 if (coflows.nonEmpty) {
-                    logger.trace(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
+                    logger.debug(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
                 }
                 for (ip <- sender.path.address.host) {
                     ipToCoflows(ip) = SlaveCoflows(coflows)
@@ -148,7 +148,7 @@ private[coflow] object CoflowMaster {
 
                     val phase4 = System.currentTimeMillis
 
-                    logger.trace(s"For ${coflows.size} flows, " +
+                    logger.debug(s"For ${coflows.size} flows, " +
                         s"clustering: ${phase1 - start} ms, " +
                         s"schedule: ${phase2 - phase1} ms, " +
                         s"calculate rate: ${phase3 - phase2} ms, " +

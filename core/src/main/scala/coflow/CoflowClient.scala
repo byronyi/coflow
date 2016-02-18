@@ -29,7 +29,7 @@ object CoflowClient {
 
     private[coflow] def register(flow: Flow, coflowId: String) = {
         flowToCoflow(flow) = coflowId
-        logger.trace(s"$flow registered with coflow id $coflowId")
+        logger.debug(s"$flow registered with coflow id $coflowId")
         client.andThen {
             case Success(actor) => actor ! FlowRegister(flow)
             case Failure(e) => logger.warn("cannot send flow started notification to client actor", e)
@@ -43,7 +43,7 @@ object CoflowClient {
     private[coflow] def open(channel: CoflowChannel) = {
 
         val flow = channel.flow
-        logger.trace(s"$flow started writing")
+        logger.debug(s"$flow started writing")
 
         flowToChannel(flow) = channel
     }
@@ -51,7 +51,7 @@ object CoflowClient {
     private[coflow] def close(channel: CoflowChannel) = {
 
         val flow = channel.flow
-        logger.trace(s"$flow finishes with size ${channel.getBytesSent} bytes")
+        logger.debug(s"$flow finishes with size ${channel.getBytesSent} bytes")
 
         flowToChannel -= flow
         flowToCoflow -= flow

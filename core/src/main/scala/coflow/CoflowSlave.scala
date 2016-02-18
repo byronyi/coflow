@@ -28,7 +28,7 @@ private[coflow] object CoflowSlave {
 
     val tcInterface = Option(System.getenv("COFLOW_TC_INTERFACE")).getOrElse("eth0")
     val tcParent = Option(System.getenv("COFLOW_TC_PARENT_CLASS")).getOrElse("1:1")
-    val tcBandwidth = Option(System.getenv("COFLOW_TC_BANDWIDTH_BYTES")).getOrElse("13107200").toInt
+    val tcBandwidth = Option(System.getenv("COFLOW_TC_BANDWIDTH_BYTES")).getOrElse("131072000").toInt
 
     private val logger = LoggerFactory.getLogger(CoflowSlave.getClass)
 
@@ -85,17 +85,19 @@ private[coflow] object CoflowSlave {
         override def receive = {
 
             case FlowRegister(flow) =>
-                val tcFlowId = {
-                    val first = flowId.incrementAndGet() & 0xffff
-                    if (first != parentFlowId) {
-                        first
-                    } else {
-                        flowId.incrementAndGet() & 0xffff
+                if (!flowToEnforcer.contains(flow)) {
+                    val tcFlowId = {
+                        val first = flowId.incrementAndGet() & 0xffff
+                        if (first != parentFlowId) {
+                            first
+                        } else {
+                            flowId.incrementAndGet() & 0xffff
+                        }
                     }
+                    val enforcer = new HTBRateEnforcer(flow, tcIfIndex, tcParentClassId, tcFlowId, tcBandwidth)
+                    flowToEnforcer(flow) = enforcer
+                    enforcer.start()
                 }
-                val enforcer = new HTBRateEnforcer(flow, tcIfIndex, tcParentClassId, tcFlowId, tcBandwidth)
-                flowToEnforcer(flow) = enforcer
-                enforcer.start()
 
             case FlowEnd(flow) =>
                 for (enforcer <- flowToEnforcer.get(flow)) {
@@ -105,14 +107,14 @@ private[coflow] object CoflowSlave {
 
             case ClientCoflows(coflows) =>
                 if (coflows.nonEmpty) {
-                    logger.trace(s"received client coflows with ${coflows.length} flows")
+                    logger.debug(s"received client coflows with ${coflows.length} flows")
                 }
                 val address = sender.path.address
                 addressToCoflows(address) = ClientCoflows(coflows)
                 addressToClient(address) = sender
 
             case FlowRateLimit(flowToRate) =>
-                logger.trace(s"received flow rate limits with ${flowToRate.size} flows")
+                logger.debug(s"received flow rate limits with ${flowToRate.size} flows")
                 for ((flow, rate) <- flowToRate;
                      enforcer <- flowToEnforcer.get(flow)) {
                     enforcer.setRate(rate)
