@@ -14,10 +14,10 @@ import scala.concurrent.duration._
 
 private[coflow] object CoflowMaster {
 
-    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).getOrElse("1000").toInt
+    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).map(_.toInt).getOrElse(1000)
 
     val host = Option(System.getenv("COFLOW_MASTER_IP")).getOrElse(InetAddress.getLocalHost.getHostAddress)
-    val port = 1606
+    val port = Option(System.getenv("COFLOW_MASTER_PORT")).map(_.toInt).getOrElse(1606)
 
     private val logger = LoggerFactory.getLogger(CoflowMaster.getClass)
 

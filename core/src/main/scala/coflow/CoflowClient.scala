@@ -1,6 +1,7 @@
 package coflow
 
 import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor._
 import org.slf4j.LoggerFactory
@@ -13,12 +14,12 @@ import scala.util.{Failure, Success}
 
 object CoflowClient {
 
-    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).getOrElse("1000").toInt
+    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).map(_.toInt).getOrElse(1000)
 
     val MIN_BYTES_SENT_REPORTING_THRESHOLD = 10 * 1024 * 1024
 
     val host = InetAddress.getLocalHost.getHostAddress
-    val slavePort = 1607
+    val slavePort = Option(System.getenv("COFLOW_SLAVE_PORT")).map(_.toInt).getOrElse(1607)
     val slaveUrl = s"akka.tcp://coflowSlave@$host:$slavePort/user/slave"
     val client = Future {
         ActorSystem("coflowClient").actorOf(Props[ClientActor])
@@ -26,6 +27,7 @@ object CoflowClient {
     private val logger = LoggerFactory.getLogger(CoflowClient.getClass)
     private val flowToChannel = TrieMap[Flow, CoflowChannel]()
     private val flowToCoflow = TrieMap[Flow, String]()
+    private val flowQuantumSize = TrieMap[Flow, AtomicLong]()
 
     private[coflow] def register(flow: Flow, coflowId: String) = {
         flowToCoflow(flow) = coflowId
@@ -46,6 +48,10 @@ object CoflowClient {
         logger.debug(s"$flow started writing")
 
         flowToChannel(flow) = channel
+    }
+
+    private[coflow] def write(channel: CoflowChannel, bytesWritten: Long) = {
+        flowQuantumSize.getOrElseUpdate(channel.flow, new AtomicLong(0L)).addAndGet(bytesWritten)
     }
 
     private[coflow] def close(channel: CoflowChannel) = {
@@ -84,6 +90,12 @@ object CoflowClient {
                 }
 
             case MergeAndSync =>
+
+                for ((flow, quantumSize) <- flowQuantumSize) {
+                    logger.debug(s"$flow sending with rate ${quantumSize.get()*1000 / REMOTE_SYNC_PERIOD_MILLIS} bytes/s")
+                }
+                flowQuantumSize.clear()
+
                 for (actor <- slave) {
                     val clientCoflows = flowToCoflow.flatMap({
                         case (flow, coflowId) =>

@@ -18,17 +18,18 @@ import scala.util.{Failure, Success, Try}
 
 private[coflow] object CoflowSlave {
 
-    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).getOrElse("1000").toInt
+    val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).map(_.toInt).getOrElse(1000)
 
     val host = InetAddress.getLocalHost.getHostAddress
-    val port = 1607
+    val port = Option(System.getenv("COFLOW_SLAVE_PORT")).map(_.toInt).getOrElse(1607)
+
     val masterIp = Option(System.getenv("COFLOW_MASTER_IP")).getOrElse(host)
-    val masterPort = 1606
+    val masterPort = Option(System.getenv("COFLOW_MASTER_PORT")).map(_.toInt).getOrElse(1606)
     val masterUrl = s"akka.tcp://coflowMaster@$masterIp:$masterPort/user/master"
 
     val tcInterface = Option(System.getenv("COFLOW_TC_INTERFACE")).getOrElse("eth0")
     val tcParent = Option(System.getenv("COFLOW_TC_PARENT_CLASS")).getOrElse("1:1")
-    val tcBandwidth = Option(System.getenv("COFLOW_TC_BANDWIDTH_BYTES")).getOrElse("131072000").toInt
+    val tcBandwidth = Option(System.getenv("COFLOW_TC_BANDWIDTH_BYTES")).map(_.toInt).getOrElse(131072000)
 
     private val logger = LoggerFactory.getLogger(CoflowSlave.getClass)
 

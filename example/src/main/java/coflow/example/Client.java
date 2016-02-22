@@ -45,7 +45,7 @@ public class Client {
 
                 long start = System.currentTimeMillis();
 
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 1000; i++) {
                     ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
                     byteBuf.writeBytes(junk);
                     channel.writeAndFlush(byteBuf).sync();
@@ -54,7 +54,7 @@ public class Client {
                 long end = System.currentTimeMillis();
                 channel.close().sync();
 
-                System.out.println("Wrote 100MB in " + (end - start) / 1000. + "s");
+                System.out.println("Wrote 1000MB in " + (end - start) / 1000. + "s");
             }
         } finally {
             workerGroup.shutdownGracefully();

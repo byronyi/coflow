@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CoflowChannel {
 
     final static private ConcurrentMap<Object, String> keyToCoflowId = new ConcurrentHashMap<>();
-    final protected AtomicLong bytesWritten = new AtomicLong(0L);
+    final private AtomicLong bytesWritten = new AtomicLong(0L);
     final private Flow flow;
 
     public CoflowChannel(SocketChannel channel) throws IOException {
@@ -67,6 +67,7 @@ public class CoflowChannel {
 
     public void write(long size) {
         bytesWritten.addAndGet(size);
+        CoflowClient$.MODULE$.write(this, size);
     }
 
     public void close() {
