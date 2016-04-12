@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 private[coflow] object CoflowMaster {
 
     val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).map(_.toInt).getOrElse(1000)
+    val UNKNOWN_HOST_FREE_BANDWIDTH = 1024*1024*1024L
 
     val host = Option(System.getenv("COFLOW_MASTER_IP")).getOrElse(InetAddress.getLocalHost.getHostAddress)
     val port = Option(System.getenv("COFLOW_MASTER_PORT")).map(_.toInt).getOrElse(1606)
@@ -50,26 +51,29 @@ private[coflow] object CoflowMaster {
         coflowIds.map(coflowPriority(_))
     }
 
-    def getRate(flows: Array[Flow], priorities: Array[Int]): Array[Long] = {
+    def getRate(flows: Array[Flow], priorities: Array[Int]): Map[Flow, Long] = {
 
         val priorityQueue = priorities.zip(flows).groupBy(_._1).toArray.sortBy(_._1).map(_._2.map(_._2))
 
-        val egressFree = mutable.Map[String, Long]() ++ ipToBandwidth
-        val ingressFree = mutable.Map[String, Long]() ++ ipToBandwidth
+        val egressFree = mutable.HashMap[String, Long]() ++ ipToBandwidth
+        val ingressFree = mutable.HashMap[String, Long]() ++ ipToBandwidth
 
         priorityQueue.flatMap(queue => {
+            logger.debug(s"scheduling queue ${queue.mkString(", ")}")
             val egressNumFlows = queue.groupBy(_.srcIp).mapValues(_.length)
             val ingressNumFlows = queue.groupBy(_.dstIp).mapValues(_.length)
             queue.map(flow => {
-                val rate = math.min(egressFree.getOrElse(flow.srcIp, 0L) / egressNumFlows(flow.srcIp),
-                    ingressFree.getOrElse(flow.dstIp, 0L) / ingressNumFlows(flow.dstIp))
+                val rate = math.min(
+                    egressFree.getOrElse(flow.srcIp, UNKNOWN_HOST_FREE_BANDWIDTH) / egressNumFlows(flow.srcIp),
+                    ingressFree.getOrElse(flow.dstIp, UNKNOWN_HOST_FREE_BANDWIDTH) / ingressNumFlows(flow.dstIp)
+                )
                 if (rate > 0) {
                     egressFree(flow.srcIp) -= rate
                     ingressFree(flow.dstIp) -= rate
                 }
-                rate
+                (flow, rate)
             })
-        })
+        }).toMap
     }
 
 
@@ -82,7 +86,7 @@ private[coflow] object CoflowMaster {
         override def receive = {
 
             case SlaveRegister(bandwidth) =>
-                logger.info(s"slave from ${sender.path.address} registered with $bandwidth byte/s bandwidth")
+                logger.info(s"${sender.path.address.host} registers with $bandwidth byte/s bandwidth")
                 for (ip <- sender.path.address.host) {
                     ipToBandwidth(ip) = bandwidth
                     ipToSlave(ip) = sender
@@ -90,7 +94,7 @@ private[coflow] object CoflowMaster {
 
             case SlaveCoflows(coflows) =>
                 if (coflows.nonEmpty) {
-                    logger.debug(s"slave from ${sender.path.address} report coflows with ${coflows.length} flows")
+                    logger.debug(s"${sender.path.address.host} reports coflows ${coflows.mkString(", ")}")
                 }
                 for (ip <- sender.path.address.host) {
                     ipToCoflows(ip) = SlaveCoflows(coflows)
@@ -102,21 +106,25 @@ private[coflow] object CoflowMaster {
 
                 if (coflows.nonEmpty) {
 
+                    logger.debug(s"scheduling ${coflows.map(_.flow).mkString(", ")}")
+
                     val start = System.currentTimeMillis
 
                     val priorities = getSchedule(coflows.map(_.bytesWritten).toArray, coflows.map(_.coflowId).toArray)
+
+                    logger.debug(s"assigned priorities ${priorities.mkString(", ")}")
 
                     val phase1 = System.currentTimeMillis
 
                     val rates = getRate(coflows.map(_.flow).toArray, priorities)
 
+                    logger.debug(s"assigned rates ${rates.mkString(", ")}")
+
                     val phase2 = System.currentTimeMillis
 
-                    for ((srcIp, flowRates) <- coflows.map(_.flow).zip(rates).groupBy(_._1.srcIp)) {
+                    for ((srcIp, flowRates) <- rates.groupBy(_._1.srcIp)) {
                         for (actor <- ipToSlave.get(srcIp)) {
-                            if (flowRates.nonEmpty) {
-                                actor ! FlowRateLimit(flowRates.toMap)
-                            }
+                            actor ! FlowRateLimit(flowRates)
                         }
                     }
 

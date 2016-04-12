@@ -12,6 +12,8 @@ private[coflow] case class SlaveCoflows(coflows: Array[Coflow]) extends CoflowMe
 
 private[coflow] case class FlowRateLimit(flowToRate: Map[Flow, Long]) extends CoflowMessage
 
+private[coflow] case class FlowPriority(flowToRate: Map[Flow, Int]) extends CoflowMessage
+
 // Client <-> Slave
 private[coflow] case class ClientCoflows(coflows: Array[Coflow]) extends CoflowMessage
 

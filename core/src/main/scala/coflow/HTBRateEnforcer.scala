@@ -36,16 +36,29 @@ private[coflow] class HTBRateEnforcer(flow: Flow, tcIfIndex: Int, tcParentClassI
         } recover {
             case e: IOException => logger.warn("cannot add tc_filter", e)
         }
-        setRate(tcCeilRate)
+        tcClass.setRate(tcCeilRate)
     }
 
     def setRate(rate: Long) = {
-        tcClass.setRate({ if (rate < MIN_HTB_RATE_LIMIT_BYTES) MIN_HTB_RATE_LIMIT_BYTES else rate })
+        val r = math.max(MIN_HTB_RATE_LIMIT_BYTES, rate)
+        val c = math.min(tcCeilRate, 2*rate)
+        tcClass.setRate(r)
+        tcClass.setCeil(c)
         Try {
             tcClass.add(nlSocket, 0x400)
             logger.debug(s"changed $flow rate limit to $rate byte/s")
         } recover {
             case e: IOException => logger.warn(s"cannot modify tc_class during setRate($rate)", e)
+        }
+    }
+
+    def setPriority(priority: Int) = {
+        tcClass.setPrio(priority)
+        Try {
+            tcClass.add(nlSocket, 0x400)
+            logger.debug(s"changed $flow priority $priority")
+        } recover {
+            case e: IOException => logger.warn(s"cannot modify tc_class during setPriority($priority)", e)
         }
     }
 

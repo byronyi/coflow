@@ -108,17 +108,24 @@ private[coflow] object CoflowSlave {
 
             case ClientCoflows(coflows) =>
                 if (coflows.nonEmpty) {
-                    logger.debug(s"received client coflows with ${coflows.length} flows")
+                    logger.debug(s"received client coflows ${coflows.mkString(", ")}")
                 }
                 val address = sender.path.address
                 addressToCoflows(address) = ClientCoflows(coflows)
                 addressToClient(address) = sender
 
             case FlowRateLimit(flowToRate) =>
-                logger.debug(s"received flow rate limits with ${flowToRate.size} flows")
+                logger.info(s"received flow rate limits $flowToRate")
                 for ((flow, rate) <- flowToRate;
                      enforcer <- flowToEnforcer.get(flow)) {
                     enforcer.setRate(rate)
+                }
+
+            case FlowPriority(flowPriority) =>
+                logger.info(s"received flow rate priority $flowPriority")
+                for ((flow, priority) <- flowPriority;
+                     enforcer <- flowToEnforcer.get(flow)) {
+                    enforcer.setPriority(priority)
                 }
 
             case MergeAndSync =>

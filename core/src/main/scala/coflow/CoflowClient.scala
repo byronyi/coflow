@@ -15,7 +15,6 @@ import scala.util.{Failure, Success}
 object CoflowClient {
 
     val REMOTE_SYNC_PERIOD_MILLIS = Option(System.getenv("COFLOW_SYNC_PERIOD_MS")).map(_.toInt).getOrElse(1000)
-
     val MIN_BYTES_SENT_REPORTING_THRESHOLD = 10 * 1024 * 1024
 
     val host = InetAddress.getLocalHost.getHostAddress
@@ -31,7 +30,7 @@ object CoflowClient {
 
     private[coflow] def register(flow: Flow, coflowId: String) = {
         flowToCoflow(flow) = coflowId
-        logger.debug(s"$flow registered with coflow id $coflowId")
+        logger.info(s"$flow registered with coflow id $coflowId")
         client.andThen {
             case Success(actor) => actor ! FlowRegister(flow)
             case Failure(e) => logger.warn("cannot send flow started notification to client actor", e)
@@ -45,7 +44,7 @@ object CoflowClient {
     private[coflow] def open(channel: CoflowChannel) = {
 
         val flow = channel.flow
-        logger.debug(s"$flow started writing")
+        logger.info(s"$flow started writing")
 
         flowToChannel(flow) = channel
     }
@@ -57,7 +56,7 @@ object CoflowClient {
     private[coflow] def close(channel: CoflowChannel) = {
 
         val flow = channel.flow
-        logger.debug(s"$flow finishes with size ${channel.getBytesSent} bytes")
+        logger.info(s"$flow finishes with size ${channel.getBytesSent} bytes")
 
         flowToChannel -= flow
         flowToCoflow -= flow
@@ -73,6 +72,13 @@ object CoflowClient {
 
         override def preStart = {
             context.system.scheduler.schedule(0.second, REMOTE_SYNC_PERIOD_MILLIS.millis, self, MergeAndSync)
+            context.system.scheduler.schedule(0.second, 1.second, new Runnable {
+                override def run() = {
+                    for ((flow, quantumSize) <- flowQuantumSize) {
+                        logger.info(s"$flow sending with rate ${quantumSize.get()} bytes/s")
+                    }
+                    flowQuantumSize.clear()
+            }})
         }
 
         override def receive = {
